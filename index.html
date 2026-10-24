@@ -1,0 +1,1512 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Acompanhamento de Saldos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+:root{--navy:#14284b;--blue:#2f5f9e;--blue-l:#e6eef8;--bg:#f2f4f7;--card:#fff;--line:#d9dee6;--tx:#1d2733;--mut:#6a7686;
+--ok:#1f8a4c;--err:#c43232;--warn:#d98a12}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font:14px/1.45 Inter,system-ui,sans-serif;color:var(--tx);background:var(--bg)}
+button,input,select{font:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.hidden{display:none!important}
+/* login */
+#login{min-height:100%;display:grid;place-items:center;padding:16px}
+.box{background:var(--card);border:1px solid var(--line);border-radius:6px;width:100%;max-width:360px;overflow:hidden}
+.box h1{margin:0;padding:18px 20px;background:var(--navy);color:#fff;font-size:16px;font-weight:600}
+.box form{padding:20px;display:grid;gap:12px}
+label{display:grid;gap:4px;font-weight:500}
+input,select{padding:8px 10px;border:1px solid var(--line);border-radius:4px;background:#fff}
+.btn{padding:9px 14px;border:0;border-radius:4px;background:var(--blue);color:#fff;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4);font-weight:500}
+.msg{color:var(--err);min-height:1.2em;font-size:13px}
+/* app */
+#app{display:grid;grid-template-columns:230px 1fr;grid-template-rows:52px 1fr;height:100%}
+header{grid-column:1/3;background:var(--navy);color:#fff;display:flex;align-items:center;gap:16px;padding:0 16px}
+header strong{font-size:15px;font-weight:600;margin-right:auto}
+header select,header input{background:#1d3a6b;color:#fff;border-color:#3a5a92;padding:5px 8px}
+.who{font-size:13px;text-align:right;line-height:1.2}.who small{opacity:.7}
+nav{background:#fff;border-right:1px solid var(--line);padding:8px 0;overflow:auto}
+nav a{display:flex;align-items:center;gap:10px;padding:10px 16px;color:var(--tx);text-decoration:none;border-left:3px solid transparent}
+nav a svg{width:17px;height:17px;stroke:var(--blue);fill:none;stroke-width:1.8;flex:none}
+nav a:hover{background:var(--bg)}
+nav a[aria-current=page]{background:var(--blue-l);border-left-color:var(--blue);font-weight:600}
+main{padding:20px;overflow:auto}
+main h2{margin:0 0 14px;font-size:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px;max-width:760px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--blue)}
+table{border-collapse:collapse;width:100%}
+td,th{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.tag.ok{background:#dff3e6;color:var(--ok)}.tag.err{background:#f9e0e0;color:var(--err)}.tag.warn{background:#fcefd5;color:#9a5f00}
+#toast{position:fixed;right:16px;bottom:16px;background:var(--navy);color:#fff;padding:10px 14px;border-radius:4px;max-width:320px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.bar input[type=search]{flex:1;min-width:220px}
+.card.tbl{max-width:none;overflow-x:auto}
+.lnk{background:none;border:0;color:var(--blue);cursor:pointer;padding:2px 6px;font-weight:500}.lnk:hover{text-decoration:underline}
+.btn.sec{background:#fff;color:var(--tx);border:1px solid var(--line)}
+dialog{border:1px solid var(--line);border-radius:6px;padding:0;width:min(480px,94vw)}
+dialog::backdrop{background:rgba(20,40,75,.45)}
+dialog form{padding:18px;display:grid;gap:12px}dialog h3{margin:0;color:var(--navy);font-size:16px}
+textarea{padding:8px 10px;border:1px solid var(--line);border-radius:4px;font:inherit;resize:vertical}
+.row{display:flex;justify-content:flex-end;gap:8px}
+.tag.mut{background:#e8ebef;color:#5b6674}
+.pills{display:flex;flex-wrap:wrap;gap:6px 14px;margin:0 0 10px;color:var(--mut);font-size:13px}.pills b{color:var(--tx)}
+table.mt{min-width:900px}.mt th.r,.mt td.r{text-align:right}.mt thead th{position:sticky;top:0;background:#fff}
+.mt input,.mt select{width:100%;padding:5px 6px}.mt input.num{text-align:right;min-width:120px}
+.catrow td{background:var(--blue-l);font-weight:600;color:var(--navy)}.ct{font-weight:400;color:var(--mut);margin-left:8px}
+.s-ok{border-left:4px solid var(--ok)}.s-err{border-left:4px solid var(--err)}.s-warn{border-left:4px solid var(--warn)}.s-mut{border-left:4px solid #9aa4b1}
+.big{font-size:24px;font-weight:600;color:var(--navy)}.warnp{color:#9a5f00;margin:6px 0 0}
+.card.wide{max-width:none}.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:#fff;border:1px solid var(--line);border-top:3px solid var(--blue);border-radius:6px;padding:12px;text-align:left;cursor:pointer;display:grid;gap:2px}
+.kpi:hover{background:var(--blue-l)}.kpi b{font-size:22px;color:var(--navy)}.kpi small{color:var(--mut)}
+.kpi.k-ok{border-top-color:var(--ok)}.kpi.k-err{border-top-color:var(--err)}.kpi.k-warn{border-top-color:var(--warn)}
+.hb{display:grid;grid-template-columns:120px 1fr 32px;gap:8px;align-items:center;margin:6px 0}.hb>div{background:#e9edf2;height:12px;border-radius:6px;overflow:hidden}
+.hb i{display:block;height:100%;border-left:0}.hb i.s-ok{background:var(--ok)}.hb i.s-err{background:var(--err)}.hb i.s-warn{background:var(--warn)}.hb i.s-mut{background:#9aa4b1}.hb b{text-align:right}
+.donut{width:120px;height:120px;border-radius:50%;display:grid;place-items:center;position:relative;flex:none}
+.donut::before{content:"";position:absolute;inset:14px;background:#fff;border-radius:50%}.donut span{position:relative;font-weight:600;font-size:20px;color:var(--navy)}
+.mt th[data-sort]{cursor:pointer;user-select:none}.mt th[data-sort]:hover{background:var(--blue-l)}
+.tiles{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.tile{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;min-width:150px;text-align:left}
+.tile svg{width:24px;height:24px;stroke:var(--blue);fill:none;stroke-width:1.8;flex:none}.tile b{font-size:20px;color:var(--navy);display:block;line-height:1.1}.tile small{color:var(--mut)}
+.tile:hover{background:var(--bg)}.tile[aria-pressed=true]{background:var(--blue-l);border-color:var(--blue)}
+.lg{display:flex;flex-wrap:wrap;gap:6px 16px;margin:8px 0 12px;font-size:13px}.lg i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px}
+.pos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.pos-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;text-align:center}
+.pos-card svg{width:56px;height:56px;fill:none;stroke-width:1.5}.pos-card .pv{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.pos-card b{font-size:14px;color:var(--navy)}.pos-card small{color:var(--mut)}.pos-card:hover{background:var(--bg)}.pos-card.off{opacity:.55}
+@media(max-width:760px){
+  #app{grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+  header{grid-column:1;flex-wrap:wrap;padding:8px 12px}
+  nav{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:0}
+  nav a{white-space:nowrap;border-left:0;border-bottom:3px solid transparent}
+  nav a[aria-current=page]{border-bottom-color:var(--blue)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login" class="hidden">
+  <div class="box">
+    <h1>Acompanhamento de Saldos</h1>
+    <form id="loginForm">
+      <label>E-mail<input type="email" id="email" autocomplete="username" required></label>
+      <label>Senha<input type="password" id="pass" autocomplete="current-password" required></label>
+      <div class="msg" id="loginMsg" role="alert"></div>
+      <button class="btn" id="loginBtn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <header>
+    <strong>Acompanhamento de Saldos</strong>
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400">Empresa
+      <select id="companySel"><option value="">Nenhuma</option></select></label>
+    <label style="display:flex;align-items:center;gap:6px;font-weight:400">Competência
+      <input type="month" id="period"></label>
+    <div class="who"><div id="whoName"></div><small id="whoRole"></small></div>
+    <button class="btn ghost" id="logout">Sair</button>
+  </header>
+  <nav id="nav" aria-label="Menu principal"></nav>
+  <main id="view" tabindex="-1"></main>
+</div>
+<div id="toast" class="hidden" role="status"></div>
+
+<script>
+/* ============ CONFIGURAÇÃO ============
+   Cole aqui a URL e a chave "anon/public" do seu projeto Supabase
+   (Project Settings > API). A chave anon é pública por desenho;
+   quem protege os dados são as políticas RLS do banco.
+   NUNCA coloque a chave service_role neste arquivo. */
+const SUPABASE_URL = "https://akmmyeqbqxhxduyvvevo.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_qp1K2n87El7VtzqaJf-8_w_R0C1xlPl";
+
+/* ============ UTILITÁRIOS ============ */
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const brl = (v) => v === null || v === undefined || v === "" ? "—" :
+  Number(v).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
+const ROLES = {admin:"Administrador", supervisor:"Contador / supervisor", operator:"Operador"};
+let toastT;
+function toast(t){ const e=$("toast"); e.textContent=t; e.classList.remove("hidden"); clearTimeout(toastT); toastT=setTimeout(()=>e.classList.add("hidden"),4000); }
+
+function cnpjValido(c){ // mesma regra do banco (usada nos formulários da Etapa 2)
+  const d=String(c||"").replace(/\D/g,""); if(d.length!==14||/^(\d)\1+$/.test(d)) return false;
+  const dv=(n)=>{const w=n===12?[5,4,3,2,9,8,7,6,5,4,3,2]:[6,5,4,3,2,9,8,7,6,5,4,3,2];
+    const s=w.reduce((a,x,i)=>a+x*+d[i],0)%11; return s<2?0:11-s;};
+  return dv(12)===+d[12] && dv(13)===+d[13];
+}
+
+/* ============ ESTADO ============ */
+const configured = !SUPABASE_URL.startsWith("COLE") && !SUPABASE_ANON_KEY.startsWith("COLE");
+let sb, state = { profile:null, companies:[], page:"dashboard" };
+
+const ICON = {
+  dashboard:'<path d="M3 13h8V3H3zm10 8h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+  empresas:'<path d="M4 21V5l8-2v18M12 9h8v12M8 8h1M8 12h1M8 16h1"/>',
+  mensal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  contas:'<path d="M3 10l9-6 9 6M5 10v9M10 10v9M14 10v9M19 10v9M3 21h18"/>',
+  caixas:'<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="2.5"/>',
+  cartoes:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  maquininhas:'<rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8.5" y="4.5" width="7" height="5" rx="1"/><path d="M9 13h.01M12 13h.01M15 13h.01M9 16h.01M12 16h.01M15 16h.01"/>',
+  folha:'<rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v.01M18 15v.01"/>',
+  fiscal:'<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 14l2 2 4-4"/>',
+  terceiros:'<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6M16 5a3 3 0 010 6M21 20c0-2.6-1.4-4.6-3.5-5.5"/>',
+  relatorios:'<path d="M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7"/>',
+  usuarios:'<circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/>',
+  config:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/>'
+};
+const PAGES = [
+  ["dashboard","Dashboard",4],["empresas","Empresas",2],["mensal","Acompanhamento mensal",2],
+  ["contas","Contas e aplicações",2],["cartoes","Cartões",2],["maquininhas","Maquininhas",2],["terceiros","Fornecedores e clientes",2],["folha","Folha",2],["fiscal","Fiscal",2],
+  ["relatorios","Relatórios",4],["usuarios","Usuários e responsáveis",2],["config","Configurações",1]
+];
+
+/* ============ INICIALIZAÇÃO ============ */
+async function init(){
+  if(!configured){
+    $("login").classList.remove("hidden");
+    $("loginMsg").textContent="Configure SUPABASE_URL e SUPABASE_ANON_KEY no início do index.html.";
+    $("loginBtn").disabled=true; return;
+  }
+  sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data:{ session } } = await sb.auth.getSession();
+  session ? await enterApp() : showLogin();
+  sb.auth.onAuthStateChange((ev)=>{ if(ev==="SIGNED_OUT") showLogin(); });
+}
+function showLogin(){ $("app").classList.add("hidden"); $("login").classList.remove("hidden"); }
+
+$("loginForm").addEventListener("submit", async (e)=>{
+  e.preventDefault(); $("loginMsg").textContent=""; $("loginBtn").disabled=true;
+  const { error } = await sb.auth.signInWithPassword({ email:$("email").value.trim(), password:$("pass").value });
+  $("loginBtn").disabled=false;
+  if(error){ $("loginMsg").textContent = error.message.includes("Invalid") ? "E-mail ou senha incorretos." : "Não foi possível entrar: "+error.message; return; }
+  $("pass").value=""; await enterApp();
+});
+$("logout").addEventListener("click", ()=>sb.auth.signOut());
+
+async function enterApp(){
+  const { data:{ user } } = await sb.auth.getUser();
+  const { data:profile, error } = await sb.from("profiles").select("*").eq("id", user.id).single();
+  if(error || !profile || !profile.active){
+    await sb.auth.signOut(); $("loginMsg").textContent="Usuário sem perfil ativo. Fale com o administrador."; return;
+  }
+  state.profile = profile;
+  $("whoName").textContent = profile.full_name || profile.email;
+  $("whoRole").textContent = ROLES[profile.role];
+  const { data:cs } = await sb.from("companies").select("id,legal_name,trade_name,cnpj,active").order("legal_name");
+  state.companies = cs || [];
+  $("companySel").innerHTML = '<option value="">Todas / nenhuma</option>' +
+    state.companies.filter(c=>c.active).map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("");
+  const now = new Date(); $("period").value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+  $("login").classList.add("hidden"); $("app").classList.remove("hidden");
+  buildNav(); go(location.hash.slice(1) || "dashboard");
+}
+
+/* ============ NAVEGAÇÃO ============ */
+function buildNav(){
+  $("nav").innerHTML = PAGES.map(([id,label])=>
+    `<a href="#${id}" data-p="${id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[id]}</svg>${esc(label)}</a>`).join("");
+}
+window.addEventListener("hashchange", ()=>{ if(state.profile) go(location.hash.slice(1)); });
+function go(id){
+  if(!PAGES.some(p=>p[0]===id)) id="dashboard";
+  state.page=id;
+  document.querySelectorAll("#nav a").forEach(a=> a.dataset.p===id ? a.setAttribute("aria-current","page") : a.removeAttribute("aria-current"));
+  const [, label, etapa] = PAGES.find(p=>p[0]===id);
+  $("view").innerHTML = `<h2>${esc(label)}</h2>` + ((id==="config"||id==="empresas"||id==="mensal"||id==="folha"||id==="fiscal"||id==="usuarios"||id==="dashboard"||id==="relatorios"||id==="cartoes"||id==="maquininhas"||PAGE_KIND[id]) ? "" :
+    `<div class="card"><p>Este módulo será implementado na <strong>Etapa ${etapa}</strong>. A estrutura do banco que ele usa já existe.</p></div>`);
+  if(id==="config") renderDiagnostico().then(()=>{ if(["admin","supervisor"].includes(state.profile.role)) renderAudit(); });
+  if(id==="empresas") renderEmpresas();
+  if(PAGE_KIND[id]) renderStruct(PAGE_KIND[id]);
+  if(id==="mensal"||id==="folha"||id==="fiscal") renderMensal();
+  if(id==="dashboard") renderDashboard();
+  if(id==="relatorios") renderRelatorios();
+  if(id==="cartoes") renderCartoes();
+  if(id==="maquininhas") renderMaquininhas();
+  if(id==="usuarios") renderUsuarios();
+}
+
+/* ============ DIAGNÓSTICO (Configurações) ============ */
+async function renderDiagnostico(){
+  const checks = [];
+  const ok = (n,v,d="")=>checks.push(`<tr><td>${esc(n)}</td><td><span class="tag ${v?"ok":"err"}">${v?"OK":"Falhou"}</span></td><td>${esc(d)}</td></tr>`);
+  ok("Conexão com o Supabase", true, SUPABASE_URL.replace(/^https?:\/\//,""));
+  ok("Sessão autenticada", !!state.profile, state.profile.email);
+  ok("Perfil de acesso", true, ROLES[state.profile.role]);
+  const tabelas = ["companies","account_categories","monitored_accounts","monthly_periods","monthly_account_records","reconciliation_issues"];
+  for(const t of tabelas){
+    const { count, error } = await sb.from(t).select("*",{count:"exact",head:true});
+    ok(`Tabela ${t}`, !error, error ? error.message : `${count} registro(s) visíveis`);
+  }
+  const { error:ea } = await sb.from("audit_logs").select("id",{head:true,count:"exact"});
+  ok("Auditoria (leitura)", !ea, ea ? ea.message : (state.profile.role==="operator" ? "Operador não vê registros (esperado)" : "Acesso permitido"));
+  $("view").innerHTML += `<div class="card"><h3>Diagnóstico da instalação</h3>
+    <table><tbody>${checks.join("")}</tbody></table></div>
+    <div class="card"><h3>Formato de valores</h3><p>Exemplo: ${brl(97.93)} · saldo não informado: ${brl(null)} · saldo zero: ${brl(0)}</p></div>`;
+}
+
+/* ============ EMPRESAS (Etapa 2.1) ============ */
+const fmtCnpj=(v)=>String(v||"").replace(/\D/g,"").slice(0,14).replace(/^(\d{2})(\d)/,"$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d)/,".$1/$2").replace(/(\d{4})(\d)/,"$1-$2");
+let empFilter={q:"",st:"active"}, empEditing=null;
+
+function fillCompanySel(){
+  const cur=$("companySel").value;
+  $("companySel").innerHTML='<option value="">Todas / nenhuma</option>'+
+    state.companies.filter(c=>c.active).map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("");
+  $("companySel").value=cur;
+}
+async function loadCompanies(){
+  const {data,error}=await sb.from("companies").select("*").order("legal_name");
+  if(error){ toast("Erro ao carregar empresas: "+error.message); return false; }
+  state.companies=data||[]; fillCompanySel(); return true;
+}
+
+async function renderEmpresas(){
+  const adm=state.profile.role==="admin";
+  $("view").innerHTML=`<h2>Empresas</h2>
+    <div class="bar"><input id="eq" type="search" placeholder="Pesquisar razão social, fantasia, CNPJ ou código" value="${esc(empFilter.q)}">
+    <select id="est"><option value="active">Ativas</option><option value="inactive">Inativas</option><option value="all">Todas</option></select>
+    ${adm?'<button class="btn" id="enew">Nova empresa</button>':""}</div>
+    <div class="card tbl" id="elist">Carregando…</div>
+    <dialog id="dlg"><form id="eform" method="dialog">
+      <h3 id="dtitle"></h3>
+      <label>Razão social *<input id="f_legal" required maxlength="200"></label>
+      <label>Nome fantasia<input id="f_trade" maxlength="200"></label>
+      <label>CNPJ *<input id="f_cnpj" inputmode="numeric" placeholder="00.000.000/0000-00" required></label>
+      <label>Código interno<input id="f_code" maxlength="50"></label>
+      <label>Observações<textarea id="f_notes" rows="3"></textarea></label>
+      <div class="msg" id="dmsg" role="alert"></div>
+      <div class="row"><button type="button" class="btn sec" id="dcancel">Cancelar</button><button class="btn" id="dsave">Salvar</button></div>
+    </form></dialog>`;
+  $("est").value=empFilter.st;
+  $("eq").addEventListener("input",e=>{empFilter.q=e.target.value;drawEmp();});
+  $("est").addEventListener("change",e=>{empFilter.st=e.target.value;drawEmp();});
+  if(adm) $("enew").addEventListener("click",()=>openEmp(null));
+  $("f_cnpj").addEventListener("input",e=>{e.target.value=fmtCnpj(e.target.value);});
+  $("dcancel").addEventListener("click",()=>$("dlg").close());
+  $("eform").addEventListener("submit",saveEmp);
+  $("elist").addEventListener("click",onEmpClick);
+  if(await loadCompanies()) drawEmp(); else $("elist").textContent="Não foi possível carregar as empresas.";
+}
+
+function drawEmp(){
+  const q=empFilter.q.trim().toLowerCase(), qd=q.replace(/\D/g,""), adm=state.profile.role==="admin";
+  const rows=state.companies.filter(c=>
+    (empFilter.st==="all"||(empFilter.st==="active")===c.active) &&
+    (!q||[c.legal_name,c.trade_name,c.internal_code].some(x=>(x||"").toLowerCase().includes(q))||(qd&&c.cnpj.includes(qd))));
+  if(!rows.length){
+    $("elist").innerHTML=state.companies.length?"Nenhuma empresa encontrada com esses filtros."
+      :(adm?"Nenhuma empresa cadastrada. Clique em <strong>Nova empresa</strong> para começar.":"Você ainda não foi vinculado a nenhuma empresa. Fale com o administrador.");
+    return;
+  }
+  $("elist").innerHTML=`<table><thead><tr><th>Razão social</th><th>Nome fantasia</th><th>CNPJ</th><th>Código</th><th>Situação</th>${adm?"<th>Ações</th>":""}</tr></thead><tbody>`+
+    rows.map(c=>`<tr><td>${esc(c.legal_name)}</td><td>${esc(c.trade_name||"—")}</td><td>${fmtCnpj(c.cnpj)}</td><td>${esc(c.internal_code||"—")}</td>
+    <td><span class="tag ${c.active?"ok":"warn"}">${c.active?"Ativa":"Inativa"}</span></td>
+    ${adm?`<td><button class="lnk" data-a="edit" data-id="${esc(c.id)}">Editar</button> <button class="lnk" data-a="tog" data-id="${esc(c.id)}">${c.active?"Inativar":"Reativar"}</button></td>`:""}</tr>`).join("")+"</tbody></table>";
+}
+
+function openEmp(c){
+  empEditing=c; $("dmsg").textContent="";
+  $("dtitle").textContent=c?"Editar empresa":"Nova empresa";
+  $("f_legal").value=c?.legal_name||""; $("f_trade").value=c?.trade_name||"";
+  $("f_cnpj").value=fmtCnpj(c?.cnpj); $("f_code").value=c?.internal_code||""; $("f_notes").value=c?.notes||"";
+  $("dlg").showModal(); $("f_legal").focus();
+}
+
+async function saveEmp(e){
+  e.preventDefault();
+  const legal=$("f_legal").value.trim(), cnpj=$("f_cnpj").value.replace(/\D/g,"");
+  if(!legal){ $("dmsg").textContent="Informe a razão social."; return; }
+  if(!cnpjValido(cnpj)){ $("dmsg").textContent="CNPJ inválido. Confira os dígitos."; return; }
+  const p={legal_name:legal,trade_name:$("f_trade").value.trim()||null,cnpj,internal_code:$("f_code").value.trim()||null,notes:$("f_notes").value.trim()||null};
+  $("dsave").disabled=true; $("dsave").textContent="Salvando…";
+  const {error}=empEditing ? await sb.from("companies").update(p).eq("id",empEditing.id)
+                           : await sb.from("companies").insert({...p,created_by:state.profile.id});
+  $("dsave").disabled=false; $("dsave").textContent="Salvar";
+  if(error){ $("dmsg").textContent = error.code==="23505" ? "Já existe uma empresa com este CNPJ."
+      : error.code==="23514" ? "CNPJ inválido." : "Não foi possível salvar: "+error.message; return; }
+  $("dlg").close(); toast(empEditing?"Empresa atualizada.":"Empresa cadastrada.");
+  if(await loadCompanies()) drawEmp();
+}
+
+async function onEmpClick(e){
+  const b=e.target.closest("button[data-a]"); if(!b) return;
+  const c=state.companies.find(x=>x.id===b.dataset.id); if(!c) return;
+  if(b.dataset.a==="edit") return openEmp(c);
+  const msg=c.active?`Inativar "${c.legal_name}"? O histórico é mantido, mas a empresa deixa de aparecer nas seleções e nos totais.`:`Reativar "${c.legal_name}"?`;
+  if(!confirm(msg)) return;
+  const {error}=await sb.from("companies").update({active:!c.active}).eq("id",c.id);
+  if(error){ toast("Não foi possível alterar: "+error.message); return; }
+  toast(c.active?"Empresa inativada.":"Empresa reativada.");
+  if(await loadCompanies()) drawEmp();
+}
+
+/* ============ CATEGORIAS E CONTAS (Etapa 2.2) ============ */
+const KINDS={
+  bank:{title:"Contas e aplicações",item:"conta",seed:[["Contas Correntes / Aplicações",true]]},
+  cash:{title:"Caixas",item:"caixa",seed:[["Caixas",true]]},
+  card:{title:"Cartões",item:"cartão",seed:[["Cartões",false]]},
+  payroll:{title:"Itens da Folha",item:"item",seed:[["Folha - CLT",false],["Folha - Ministros",false]]},
+  fiscal:{title:"Itens do Fiscal",item:"item",seed:[["Fiscal",false]]},
+  third_party:{title:"Fornecedores e clientes",item:"registro",seed:[["Fornecedores",false],["Adiantamento a fornecedores",false],["Adiantamento a clientes",false],["Clientes",false]]}
+};
+const PAGE_KIND={contas:"bank",terceiros:"third_party"};
+const hasInst=(k)=>k==="bank"||k==="card";
+const ACC_TYPES=["Conta corrente","Aplicação financeira","Conta poupança","Caixa","Cartão corporativo","Outros"];
+let SD={}, accEditing=null;
+$("companySel").addEventListener("change",()=>{ const k=PAGE_KIND[state.page]; if(k) renderStruct(k); });
+
+async function renderStruct(kind,back){ SBACK=back||null;
+  const K=KINDS[kind], cid=$("companySel").value;
+  const head=`<h2>${esc(K.title)}</h2>`+(back?'<div class="bar"><button class="btn sec" id="sback">‹ Voltar ao acompanhamento</button></div>':"");
+  if(!cid){ $("view").innerHTML=head+'<div class="card">Selecione uma empresa no cabeçalho para ver e cadastrar itens.</div>'; return; }
+  const co=state.companies.find(c=>c.id===cid);
+  $("view").innerHTML=head+`<p style="margin:-8px 0 12px;color:var(--mut)">${esc(co?.legal_name||"")}</p><div id="stool"></div><div class="card tbl" id="slist">Carregando…</div>
+   <dialog id="adlg"><form id="aform" method="dialog"><h3 id="atitle"></h3>
+     <label>Categoria *<select id="a_cat" required></select></label>
+     <label>Descrição *<input id="a_desc" required maxlength="200"></label>
+     <div id="a_bank" class="hidden" style="display:grid;gap:12px">
+       <label>Instituição financeira<input id="a_inst" maxlength="120"></label>
+       <label id="a_typel">Tipo de conta<select id="a_type"><option value="">—</option>${ACC_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></label>
+       <label><span id="a_numt">Número da conta</span><input id="a_num" maxlength="60"></label></div>
+     <label>Código contábil<input id="a_code" maxlength="60"></label>
+     <label>Responsável sugerido<select id="a_resp"></select></label>
+     <div class="msg" id="amsg" role="alert"></div>
+     <div class="row"><button type="button" class="btn sec" id="acancel">Cancelar</button><button class="btn" id="asave">Salvar</button></div></form></dialog>
+   <dialog id="cdlg"><form id="cform" method="dialog"><h3>Categorias</h3><div id="clist"></div>
+     <label>Nova categoria<input id="c_name" maxlength="100"></label>
+     <label id="c_cashl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="c_cash" checked> Entra no total de disponibilidade financeira</label>
+     <div class="msg" id="cmsg" role="alert"></div>
+     <div class="row"><button type="button" class="btn sec" id="cclose">Fechar</button><button class="btn" id="cadd">Adicionar</button></div></form></dialog>`;
+  const [cats,accs,pf]=await Promise.all([
+    sb.from("account_categories").select("*").eq("company_id",cid).eq("kind",kind).order("sort_order").order("name"),
+    sb.from("monitored_accounts").select("*, account_categories!inner(kind)").eq("company_id",cid).eq("account_categories.kind",kind).order("sort_order").order("description"),
+    sb.from("profiles").select("id,full_name,email").eq("active",true).order("full_name")]);
+  const err=cats.error||accs.error||pf.error;
+  if(err){ $("slist").textContent="Erro ao carregar: "+err.message; return; }
+  SD={kind,cid,cats:cats.data,accs:accs.data,people:pf.data};
+  $("a_bank").classList.toggle("hidden",!hasInst(kind)); $("a_typel").classList.toggle("hidden",kind!=="bank"); $("c_cashl").classList.toggle("hidden",!(kind==="bank"||kind==="cash"));
+  if(kind==="card"){ $("a_numt").textContent="Final do cartão (somente os 4 últimos dígitos)"; $("a_num").maxLength=4; $("a_num").placeholder="0000"; }
+  $("slist").onclick=onStructClick; $("acancel").onclick=()=>$("adlg").close(); $("cclose").onclick=()=>$("cdlg").close();
+  $("aform").onsubmit=saveAcc; $("cform").onsubmit=addCat;
+  drawStruct();
+}
+
+function drawStruct(){
+  const adm=state.profile.role==="admin", {kind,cats,accs,people}=SD, K=KINDS[kind];
+  const nome=(id)=>{const p=people.find(x=>x.id===id); return p?esc(p.full_name||p.email):"—";};
+  $("stool").innerHTML=(kind==="bank"?typeTiles(accs,SD.tf):"")+(adm?`<div class="bar">${cats.length?`<button class="btn" id="anew">Novo ${esc(K.item)}</button>`:""}<button class="btn sec" id="cman">Categorias</button></div>`:"");
+  $("stool").onclick=(e)=>{ const b=e.target.closest(".tile"); if(!b) return; SD.tf=SD.tf===b.dataset.t?"":b.dataset.t; drawStruct(); };
+  if(adm){ if($("anew")) $("anew").onclick=()=>openAcc(null); $("cman").onclick=openCats; }
+  if(!cats.length){
+    $("slist").innerHTML=`Nenhuma categoria cadastrada para esta empresa.`+(adm?` <button class="btn" id="seed" style="margin-left:8px">Criar categorias padrão</button>`:"");
+    if(adm) $("seed").onclick=seedCats; return;
+  }
+  const cols=kind==="bank"?["Descrição","Instituição","Tipo","Número","Código contábil","Responsável"]:kind==="card"?["Descrição","Instituição","Final do cartão","Código contábil","Responsável"]:["Descrição","Código contábil","Responsável"];
+  $("slist").innerHTML=cats.map(c=>{
+    const rows=accs.filter(a=>a.category_id===c.id&&(!SD.tf||(a.account_type||"(sem tipo)")===SD.tf));
+    return `<h3 style="margin:14px 0 6px">${esc(c.name)} <span class="tag ${c.counts_as_cash?"ok":"warn"}">${c.counts_as_cash?"Entra na disponibilidade":"Controle contábil"}</span>${c.active?"":' <span class="tag warn">Categoria inativa</span>'}</h3>`+
+    (rows.length?`<table><thead><tr>${cols.map(x=>`<th>${x}</th>`).join("")}<th>Situação</th>${adm?"<th>Ações</th>":""}</tr></thead><tbody>`+rows.map(a=>
+      `<tr><td>${esc(a.description)}</td>`+(kind==="bank"?`<td>${esc(a.institution||"—")}</td><td>${esc(a.account_type||"—")}</td><td>${esc(a.account_number||"—")}</td>`:kind==="card"?`<td>${esc(a.institution||"—")}</td><td>${esc(a.account_number||"—")}</td>`:"")+
+      `<td>${esc(a.accounting_code||"—")}</td><td>${nome(a.default_responsible)}</td><td><span class="tag ${a.active?"ok":"warn"}">${a.active?"Ativo":"Inativo"}</span></td>`+
+      (adm?`<td><button class="lnk" data-a="edit" data-id="${esc(a.id)}">Editar</button> <button class="lnk" data-a="tog" data-id="${esc(a.id)}">${a.active?"Inativar":"Reativar"}</button></td>`:"")+"</tr>").join("")+"</tbody></table>"
+     :'<p style="color:var(--mut);margin:4px 0">Nenhum item nesta categoria.</p>');
+  }).join("");
+}
+
+async function seedCats(){
+  const rows=KINDS[SD.kind].seed.map(([name,cash],i)=>({company_id:SD.cid,kind:SD.kind,name,counts_as_cash:cash,sort_order:i+1}));
+  const {error}=await sb.from("account_categories").insert(rows);
+  if(error){ toast("Não foi possível criar as categorias: "+error.message); return; }
+  toast("Categorias criadas."); renderStruct(SD.kind);
+}
+
+function openCats(){
+  $("cmsg").textContent=""; $("c_name").value="";
+  $("clist").innerHTML=SD.cats.length?"<table><tbody>"+SD.cats.map(c=>`<tr><td>${esc(c.name)}</td><td>${c.counts_as_cash?"Disponibilidade":"Controle contábil"}</td>
+    <td><button type="button" class="lnk" data-cid="${esc(c.id)}">${c.active?"Inativar":"Reativar"}</button></td></tr>`).join("")+"</tbody></table>":"<p>Nenhuma categoria.</p>";
+  $("clist").onclick=async(e)=>{ const b=e.target.closest("button[data-cid]"); if(!b) return;
+    const c=SD.cats.find(x=>x.id===b.dataset.cid);
+    const {error}=await sb.from("account_categories").update({active:!c.active}).eq("id",c.id);
+    if(error){ $("cmsg").textContent="Erro: "+error.message; return; }
+    c.active=!c.active; openCats(); drawStruct(); };
+  $("cdlg").showModal();
+}
+async function addCat(e){
+  e.preventDefault(); const name=$("c_name").value.trim();
+  if(!name){ $("cmsg").textContent="Informe o nome da categoria."; return; }
+  const cash=(SD.kind==="bank"||SD.kind==="cash")?$("c_cash").checked:false;
+  const {data,error}=await sb.from("account_categories").insert({company_id:SD.cid,kind:SD.kind,name,counts_as_cash:cash,sort_order:SD.cats.length+1}).select().single();
+  if(error){ $("cmsg").textContent=error.code==="23505"?"Já existe uma categoria com esse nome.":"Erro: "+error.message; return; }
+  SD.cats.push(data); openCats(); drawStruct(); toast("Categoria adicionada.");
+}
+
+function openAcc(a){
+  accEditing=a; $("amsg").textContent=""; $("atitle").textContent=a?"Editar "+KINDS[SD.kind].item:"Novo "+KINDS[SD.kind].item;
+  $("a_cat").innerHTML=SD.cats.filter(c=>c.active||c.id===a?.category_id).map(c=>`<option value="${esc(c.id)}">${esc(c.name)}</option>`).join("");
+  $("a_resp").innerHTML='<option value="">Nenhum</option>'+SD.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+  $("a_cat").value=a?.category_id||$("a_cat").options[0]?.value||""; $("a_desc").value=a?.description||"";
+  $("a_inst").value=a?.institution||""; if(a?.account_type&&!ACC_TYPES.includes(a.account_type)) $("a_type").insertAdjacentHTML("beforeend",`<option>${esc(a.account_type)}</option>`); $("a_type").value=a?.account_type||""; $("a_num").value=a?.account_number||"";
+  $("a_code").value=a?.accounting_code||""; $("a_resp").value=a?.default_responsible||"";
+  $("adlg").showModal(); $("a_desc").focus();
+}
+async function saveAcc(e){
+  e.preventDefault(); const desc=$("a_desc").value.trim();
+  if(!desc||!$("a_cat").value){ $("amsg").textContent="Informe a categoria e a descrição."; return; }
+  const bank=SD.kind==="bank", inst=hasInst(SD.kind), t=(id)=>$(id).value.trim()||null;
+  if(SD.kind==="card"&&$("a_num").value.trim()&&!/^\d{4}$/.test($("a_num").value.trim())){ $("amsg").textContent="Informe somente os 4 últimos dígitos do cartão (nunca o número completo)."; return; }
+  const p={category_id:$("a_cat").value,description:desc,institution:inst?t("a_inst"):null,account_type:bank?t("a_type"):null,
+    account_number:inst?t("a_num"):null,accounting_code:t("a_code"),default_responsible:$("a_resp").value||null};
+  $("asave").disabled=true;
+  const {data,error}=accEditing ? await sb.from("monitored_accounts").update(p).eq("id",accEditing.id).select("*, account_categories!inner(kind)").single()
+    : await sb.from("monitored_accounts").insert({...p,company_id:SD.cid,sort_order:SD.accs.length+1}).select("*, account_categories!inner(kind)").single();
+  $("asave").disabled=false;
+  if(error){ $("amsg").textContent="Não foi possível salvar: "+error.message; return; }
+  SD.accs=accEditing?SD.accs.map(x=>x.id===data.id?data:x):[...SD.accs,data];
+  $("adlg").close(); drawStruct(); toast("Salvo.");
+}
+async function onStructClick(e){
+  const b=e.target.closest("button[data-a]"); if(!b) return;
+  const a=SD.accs.find(x=>x.id===b.dataset.id); if(!a) return;
+  if(b.dataset.a==="edit") return openAcc(a);
+  if(!confirm(a.active?`Inativar "${a.description}"? O histórico é mantido e o item sai das próximas competências e dos totais.`:`Reativar "${a.description}"?`)) return;
+  const {error}=await sb.from("monitored_accounts").update({active:!a.active}).eq("id",a.id);
+  if(error){ toast("Não foi possível alterar: "+error.message); return; }
+  a.active=!a.active; drawStruct(); toast(a.active?"Item reativado.":"Item inativado.");
+}
+
+/* ============ ACOMPANHAMENTO MENSAL (Etapa 2.3) ============ */
+const MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+const ST={pendente:["Pendente","err"],em_andamento:["Em andamento","warn"],concluido:["Concluído","ok"],divergencia:["Com divergência","err"],nao_aplicavel:["Não aplicável","mut"]};
+const GROUPS=[["bank","Contas Correntes / Aplicações"],["cash","Caixas"],["card","Cartões"],["third_party","Fornecedores / Clientes"],["payroll","Folha"],["fiscal","Fiscal"]];
+const fmtNum=(v)=>v==null?"":Number(v).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const parseBRL=(s)=>{ s=String(s).replace(/[R$\s]/g,""); if(s==="") return null;
+  if(!/^-?(\d{1,3}(\.\d{3})+|\d+)(,\d{1,2})?$/.test(s)) return undefined; return Number(s.replace(/\./g,"").replace(",","."));};
+const cents=(v)=>Math.round(Number(v)*100);
+let MM={per:null,rows:[],people:[],locked:false};
+$("period").addEventListener("change",()=>{ if(["mensal","folha","fiscal"].includes(state.page)) renderMensal(); });
+$("companySel").addEventListener("change",()=>{ if(["mensal","folha","fiscal"].includes(state.page)) renderMensal(); });
+
+async function renderMensal(only){
+  if(only===undefined) only=({folha:["payroll"],fiscal:["fiscal"]})[state.page]||null;
+  const cid=$("companySel").value, ym=$("period").value, head="<h2>"+(({folha:"Folha",fiscal:"Fiscal"})[state.page]||"Acompanhamento mensal")+"</h2><div class=\"bar\"><button class=\"btn sec\" id=\"mprev\">‹ Mês anterior</button><button class=\"btn sec\" id=\"mnext\">Mês seguinte ›</button>"+(["admin","supervisor"].includes(state.profile.role)?'<button class="btn sec" id="mimport">Importar planilha</button>':"")+(state.profile.role==="admin"&&({folha:1,fiscal:1})[state.page]?'<button class="btn sec" id="mitems">Gerenciar itens</button>':"")+"</div>";
+  if(!cid||!ym){ $("view").innerHTML=head+'<div class="card">Selecione a empresa e a competência no cabeçalho.</div>'; return; }
+  const [y,m]=ym.split("-").map(Number), co=state.companies.find(c=>c.id===cid);
+  const title=`${co?.legal_name||""} — ${MESES[m-1]} de ${y}`;
+  $("view").innerHTML=head+`<p style="margin:-8px 0 12px;color:var(--mut)">${esc(title)}</p><div id="mbody">Carregando…</div>`;
+  const {data:per,error}=await sb.from("monthly_periods").select("*").eq("company_id",cid).eq("year",y).eq("month",m).maybeSingle();
+  if(error){ $("mbody").textContent="Erro ao carregar: "+error.message; return; }
+  if(!per){
+    const can=["admin","supervisor"].includes(state.profile.role);
+    $("mbody").innerHTML=`<div class="card">Esta competência ainda não foi aberta.${can?` <button class="btn" id="mcreate" style="margin-left:8px">Criar competência de ${MESES[m-1]}/${y}</button>
+      <p style="color:var(--mut);margin:10px 0 0">Copia as contas ativas. O saldo final fica vazio, a situação volta para Pendente e o saldo anterior vem do mês anterior, se existir.</p>`:""}</div>`;
+    if(can) $("mcreate").onclick=()=>createPanel(cid,y,m);
+    return;
+  }
+  const [rs,pf]=await Promise.all([
+    sb.from("monthly_account_records").select("*, monitored_accounts!inner(description,institution,account_number,accounting_code,sort_order,account_categories!inner(id,name,kind,counts_as_cash,sort_order))").eq("period_id",per.id),
+    sb.from("profiles").select("id,full_name,email").eq("active",true).order("full_name")]);
+  if(rs.error||pf.error){ $("mbody").textContent="Erro ao carregar: "+(rs.error||pf.error).message; return; }
+  const cs=(r)=>r.monitored_accounts.account_categories, ac=(r)=>r.monitored_accounts;
+  const mem=state.profile.role==="supervisor"?await sb.from("company_members").select("can_close").eq("company_id",cid).eq("user_id",state.profile.id).maybeSingle():{data:null};
+  const iss=await sb.from("reconciliation_issues").select("*, monthly_account_records!inner(period_id)").eq("monthly_account_records.period_id",per.id).order("identified_at",{ascending:false});
+  MM={per,people:pf.data,locked:per.status==="encerrada",canClose:state.profile.role==="admin"||(state.profile.role==="supervisor"&&!!mem.data?.can_close),issues:iss.data||[],only:only||null,
+      rows:rs.data.sort((a,b)=>cs(a).sort_order-cs(b).sort_order||ac(a).sort_order-ac(b).sort_order)};
+  drawMensal();
+}
+
+function drawMensal(){
+  const dis=MM.locked?"disabled":"", cs=(r)=>r.monitored_accounts.account_categories, ac=(r)=>r.monitored_accounts;
+  const people='<option value="">—</option>'+MM.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+  let h=periodBar();
+  h+=(MM.only?"":'<div class="card" id="msum"></div>')+'<div class="bar"><input type="search" id="msearch" placeholder="Pesquisar por descrição, banco, número da conta ou código contábil"></div>';
+  if(!MM.rows.length) h+='<div class="card">Nenhuma conta ativa foi encontrada para esta competência.</div>';
+  for(const [kind,label] of GROUPS){ if(MM.only?!MM.only.includes(kind):MAIN_HIDE.includes(kind)) continue;
+    const rows=MM.rows.filter(r=>cs(r).kind===kind); if(!rows.length) continue;
+    const bank=hasInst(kind), cats=[...new Map(rows.map(r=>[cs(r).id,cs(r)])).values()];
+    h+=`<div class="card tbl"><h3>${label}</h3><div id="sec-${kind}" class="pills"></div><table class="mt"><thead><tr><th data-sort="description" data-l="Descrição" tabindex="0">Descrição</th>${bank?`<th data-sort="institution" data-l="Banco" tabindex="0">Banco</th><th data-sort="account_number" data-l="Nº conta" tabindex="0">Nº conta</th>`:""}<th data-sort="accounting_code" data-l="C. contábil" tabindex="0">C. contábil</th><th class="r" data-sort="previous_balance" data-l="Saldo anterior" tabindex="0">Saldo anterior</th><th class="r" data-sort="final_balance" data-l="Saldo final" tabindex="0">Saldo final</th><th data-sort="status" data-l="Situação" tabindex="0">Situação</th><th data-sort="responsible" data-l="Responsável" tabindex="0">Responsável</th><th>Observações</th><th data-sort="updated_at" data-l="Atualizado" tabindex="0">Atualizado</th><th></th></tr></thead><tbody>`;
+    for(const c of cats){
+      h+=`<tr class="catrow"><td colspan="${bank?11:9}">${esc(c.name)} <span id="ct-${esc(c.id)}" class="ct"></span></td></tr>`;
+      for(const r of rows.filter(x=>cs(x).id===c.id)){
+        h+=`<tr data-rid="${esc(r.id)}" data-q="${esc([ac(r).description,ac(r).institution,ac(r).account_number,ac(r).accounting_code].join(" ").toLowerCase())}"><td>${esc(ac(r).description)}</td>${bank?`<td>${esc(ac(r).institution||"—")}</td><td>${esc(ac(r).account_number||"—")}</td>`:""}<td>${esc(ac(r).accounting_code||"—")}</td>
+        <td class="r">${r.previous_balance==null?"—":fmtNum(r.previous_balance)}</td>
+        <td class="r"><input class="num" data-f="final_balance" data-id="${esc(r.id)}" value="${fmtNum(r.final_balance)}" placeholder="não informado" inputmode="decimal" ${dis}></td>
+        <td><select class="s-${ST[r.status][1]}" data-f="status" data-id="${esc(r.id)}" ${dis}>${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===r.status?" selected":""}>${v[0]}</option>`).join("")}</select></td>
+        <td><select data-f="responsible_id" data-id="${esc(r.id)}" ${dis}>${people.replace(`value="${r.responsible_id}"`,`value="${r.responsible_id}" selected`)}</select></td>
+        <td><input data-f="notes" data-id="${esc(r.id)}" value="${esc(r.notes||"")}" maxlength="500" ${dis}></td><td>${new Date(r.updated_at).toLocaleDateString("pt-BR")}</td><td><button class="lnk" data-a="issue" data-id="${esc(r.id)}" ${dis}>Divergência</button></td></tr>`;
+      }
+    }
+    h+="</tbody></table></div>";
+  }
+  $("mbody").innerHTML=h+'<div class="card tbl" id="issues"></div>'+periodDialogs()+issueDialog(); $("mbody").onchange=onMensalChange; bindPeriod(); bindIssues(); updSummaries(); drawIssues(); bindSearch(); bindSort();
+}
+
+function updSummaries(){
+  const cs=(r)=>r.monitored_accounts.account_categories;
+  const sum=(rs)=>{ const ok=rs.filter(r=>r.status!=="nao_aplicavel"); const v=ok.filter(r=>r.final_balance!=null);
+    return {cents:v.reduce((a,r)=>a+cents(r.final_balance),0), missing:ok.length-v.length}; };
+  let cash=0, cashMissing=0;
+  for(const [kind] of GROUPS){ if(!$("sec-"+kind)) continue;
+    const rows=MM.rows.filter(r=>cs(r).kind===kind); if(!rows.length) continue;
+    const ap=rows.filter(r=>r.status!=="nao_aplicavel"), n=(s)=>rows.filter(r=>r.status===s).length, done=n("concluido");
+    const pct=ap.length?Math.round(done/ap.length*100)+"%":"—";
+    $("sec-"+kind).innerHTML=`<span>Registros <b>${rows.length}</b></span><span>Concluídos <b>${done}</b></span><span>Pendentes <b>${n("pendente")}</b></span><span>Em andamento <b>${n("em_andamento")}</b></span><span>Divergência <b>${n("divergencia")}</b></span><span>Não aplicável <b>${n("nao_aplicavel")}</b></span><span>Conclusão <b>${pct}</b></span>`;
+    for(const c of new Map(rows.map(r=>[cs(r).id,cs(r)])).values()){
+      const s=sum(rows.filter(r=>cs(r).id===c.id)); if(c.counts_as_cash){ cash+=s.cents; cashMissing+=s.missing; }
+      $("ct-"+c.id).textContent="Total: "+brl(s.cents/100)+(s.missing?` (${s.missing} sem saldo informado)`:"");
+    }
+  }
+  if($("msum")) $("msum").innerHTML=`<h3>Disponibilidade financeira (bancos, aplicações e caixas elegíveis)</h3><div class="big">${brl(cash/100)}</div>`+
+    (cashMissing?`<p class="warnp">Total parcial: ${cashMissing} item(ns) sem saldo informado.</p>`:"")+
+    `<p style="color:var(--mut);margin:6px 0 0">Itens "Não aplicável" ficam fora dos totais. Fornecedores e clientes nunca entram na disponibilidade.</p>`;
+}
+
+async function onMensalChange(e){
+  const el=e.target.closest("[data-f]"); if(!el) return;
+  const r=MM.rows.find(x=>x.id===el.dataset.id), f=el.dataset.f; let v=el.value;
+  const undo=()=>{ if(f==="final_balance") el.value=fmtNum(r[f]); else el.value=r[f]??""; };
+  if(f==="final_balance"){ v=parseBRL(v); if(v===undefined){ toast("Valor inválido. Use o formato 1.234,56."); undo(); return; } }
+  else if(f==="responsible_id") v=v||null; else if(f==="notes") v=v.trim()||null;
+  const {error}=await sb.from("monthly_account_records").update({[f]:v}).eq("id",r.id);
+  if(error){ toast("Não foi possível salvar: "+error.message); undo(); return; }
+  r[f]=v; if(f==="final_balance") el.value=fmtNum(v); if(f==="status") el.className="s-"+ST[v][1];
+  updSummaries(); toast("Salvo.");
+}
+
+/* ============ USUÁRIOS E VÍNCULOS (Etapa 2.4) ============ */
+let UD={users:[],links:[],cur:null};
+async function renderUsuarios(){
+  const head="<h2>Usuários e responsáveis</h2>";
+  if(state.profile.role!=="admin"){ $("view").innerHTML=head+'<div class="card">Somente administradores gerenciam usuários e vínculos.</div>'; return; }
+  $("view").innerHTML=head+`<div class="card" style="max-width:none"><p style="margin:0">Para adicionar uma pessoa, crie o e-mail e a senha no Supabase (<strong>Authentication › Users › Add user</strong>). Ela aparece aqui como <strong>Operador</strong>, sem acesso a nenhuma empresa, até você vincular.</p></div>
+    <div class="card tbl" id="ulist">Carregando…</div>
+    <dialog id="udlg"><form method="dialog" onsubmit="return false"><h3 id="utitle"></h3><div id="ulinks"></div><div class="row"><button type="button" class="btn" id="uclose">Fechar</button></div></form></dialog>`;
+  const [pf,lk,ok]=await Promise.all([sb.from("profiles").select("*").order("full_name"),sb.from("company_members").select("*"),loadCompanies()]);
+  if(pf.error||lk.error||!ok){ $("ulist").textContent="Erro ao carregar: "+(pf.error||lk.error||{message:"empresas"}).message; return; }
+  UD.users=pf.data; UD.links=lk.data; $("uclose").onclick=()=>$("udlg").close();
+  $("ulist").onchange=onUserChange; $("ulist").onclick=onUserClick; drawUsers();
+}
+function drawUsers(){
+  $("ulist").innerHTML=`<table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th>Empresas</th><th>Ações</th></tr></thead><tbody>`+UD.users.map(u=>{
+    const me=u.id===state.profile.id, n=UD.links.filter(l=>l.user_id===u.id).length, adm=u.role==="admin";
+    return `<tr><td>${esc(u.full_name||"—")}${me?" (você)":""}</td><td>${esc(u.email||"")}</td>
+    <td><select data-id="${esc(u.id)}" ${me?"disabled":""}>${Object.entries(ROLES).map(([k,v])=>`<option value="${k}"${k===u.role?" selected":""}>${v}</option>`).join("")}</select></td>
+    <td><span class="tag ${u.active?"ok":"warn"}">${u.active?"Ativo":"Inativo"}</span></td>
+    <td>${adm?"Todas":n+" empresa(s) "+`<button class="lnk" data-a="links" data-id="${esc(u.id)}">Gerenciar</button>`}</td>
+    <td><button class="lnk" data-a="name" data-id="${esc(u.id)}">Editar nome</button>${me?"":` <button class="lnk" data-a="tog" data-id="${esc(u.id)}">${u.active?"Inativar":"Reativar"}</button>`}</td></tr>`;}).join("")+"</tbody></table>";
+}
+async function updUser(u,patch){
+  const {error}=await sb.from("profiles").update(patch).eq("id",u.id);
+  if(error){ toast("Não foi possível salvar: "+error.message); return false; }
+  Object.assign(u,patch); drawUsers(); toast("Salvo."); return true;
+}
+async function onUserChange(e){
+  const sel=e.target.closest("select[data-id]"); if(!sel) return;
+  const u=UD.users.find(x=>x.id===sel.dataset.id), role=sel.value;
+  if(role==="admin"&&!confirm(`Tornar ${u.full_name||u.email} administrador? Terá acesso a todas as empresas e a todos os dados.`)){ sel.value=u.role; return; }
+  if(!await updUser(u,{role})) sel.value=u.role;
+}
+async function onUserClick(e){
+  const b=e.target.closest("button[data-a]"); if(!b) return;
+  const u=UD.users.find(x=>x.id===b.dataset.id); if(!u) return;
+  if(b.dataset.a==="links") return openLinks(u);
+  if(b.dataset.a==="name"){ const n=prompt("Nome do usuário:",u.full_name||""); if(n&&n.trim()) updUser(u,{full_name:n.trim()}); return; }
+  if(confirm(u.active?`Inativar ${u.full_name||u.email}? Ele deixa de acessar o sistema, mas o histórico é mantido.`:`Reativar ${u.full_name||u.email}?`)) updUser(u,{active:!u.active});
+}
+function renderLinks(){
+  const u=UD.cur, mine=UD.links.filter(l=>l.user_id===u.id);
+  $("ulinks").innerHTML=state.companies.length?`<table><thead><tr><th>Empresa</th><th>Acesso</th><th>Pode encerrar</th></tr></thead><tbody>`+state.companies.map(c=>{
+    const l=mine.find(x=>x.company_id===c.id);
+    return `<tr><td>${esc(c.trade_name||c.legal_name)}${c.active?"":' <span class="tag warn">Inativa</span>'}</td>
+    <td><input type="checkbox" data-k="acc" data-c="${esc(c.id)}" ${l?"checked":""}></td>
+    <td><input type="checkbox" data-k="close" data-c="${esc(c.id)}" ${l?(l.can_close?"checked":""):"disabled"}></td></tr>`;}).join("")+"</tbody></table>":"Nenhuma empresa cadastrada.";
+}
+function openLinks(u){
+  UD.cur=u; $("utitle").textContent="Empresas de "+(u.full_name||u.email); renderLinks();
+  $("ulinks").onchange=onLinkChange; $("udlg").showModal();
+}
+async function onLinkChange(e){
+  const t=e.target, k=t.dataset.k, cid=t.dataset.c, uid=UD.cur.id; if(!k) return;
+  let error;
+  if(k==="acc"){
+    if(t.checked){ const r=await sb.from("company_members").insert({company_id:cid,user_id:uid,can_close:false}).select().single(); error=r.error;
+      if(!error) UD.links.push(r.data); }
+    else { const r=await sb.from("company_members").delete().eq("company_id",cid).eq("user_id",uid); error=r.error;
+      if(!error) UD.links=UD.links.filter(l=>!(l.company_id===cid&&l.user_id===uid)); }
+  } else {
+    const r=await sb.from("company_members").update({can_close:t.checked}).eq("company_id",cid).eq("user_id",uid); error=r.error;
+    if(!error) UD.links.find(l=>l.company_id===cid&&l.user_id===uid).can_close=t.checked;
+  }
+  if(error){ toast("Não foi possível salvar: "+error.message); t.checked=!t.checked; return; }
+  renderLinks(); drawUsers(); toast("Salvo.");
+}
+
+/* ============ ENCERRAMENTO (Etapa 3.1) ============ */
+function periodBar(){
+  const p=MM.per, adm=state.profile.role==="admin";
+  const who=(id)=>{const x=MM.people.find(q=>q.id===id); return x?(x.full_name||x.email):"—";};
+  const re=p.reopened_at?`<div style="color:var(--mut);margin-top:6px">Reaberta em ${new Date(p.reopened_at).toLocaleString("pt-BR")} por ${esc(who(p.reopened_by))}. Justificativa: ${esc(p.reopen_reason||"—")}</div>`:"";
+  if(MM.locked) return `<div class="card" style="border-left:4px solid var(--warn)"><b>Competência encerrada</b> em ${new Date(p.closed_at).toLocaleString("pt-BR")} por ${esc(who(p.closed_by))}. Alterações bloqueadas.${(adm&&!MM.only)?` <button class="btn sec" id="mreopen" style="margin-left:10px">Reabrir</button>`:""}${re}</div>`;
+  return `<div class="card"><span class="tag ok">Competência aberta</span>${(MM.canClose&&!MM.only)?` <button class="btn" id="mclose" style="margin-left:10px">Encerrar competência</button>`:""}${re}</div>`;
+}
+function periodDialogs(){
+  return `<dialog id="pdlg"><form method="dialog" onsubmit="return false"><h3 id="ptitle"></h3><div id="pbody"></div><div class="msg" id="pmsg" role="alert"></div>
+    <div class="row"><button type="button" class="btn sec" id="pcancel">Cancelar</button><button type="button" class="btn" id="pok">Confirmar</button></div></form></dialog>`;
+}
+function bindPeriod(){
+  if($("mclose")) $("mclose").onclick=openClose; if($("mreopen")) $("mreopen").onclick=openReopen;
+  $("pcancel").onclick=()=>$("pdlg").close();
+}
+function openClose(){
+  const rs=MM.rows, ap=rs.filter(r=>r.status!=="nao_aplicavel"), n=(s)=>rs.filter(r=>r.status===s).length;
+  const done=n("concluido"), pend=n("pendente")+n("em_andamento"), div=n("divergencia"), iss=MM.issues.filter(i=>!i.resolved).length;
+  const cash=rs.filter(r=>r.monitored_accounts.account_categories.counts_as_cash&&r.status!=="nao_aplicavel"&&r.final_balance!=null).reduce((a,r)=>a+cents(r.final_balance),0);
+  const miss=rs.filter(r=>r.monitored_accounts.account_categories.counts_as_cash&&r.status!=="nao_aplicavel"&&r.final_balance==null).length;
+  const risk=pend+div+iss>0, adm=state.profile.role==="admin";
+  $("ptitle").textContent="Encerrar competência"; $("pmsg").textContent=""; $("pok").textContent="Encerrar";
+  $("pbody").innerHTML=`<table><tbody><tr><td>Total de contas (inclui Folha e Fiscal)</td><td><b>${rs.length}</b></td></tr><tr><td>Concluídas</td><td><b>${done}</b></td></tr>
+    <tr><td>Pendentes / em andamento</td><td><b>${pend}</b></td></tr><tr><td>Com divergência</td><td><b>${div}</b></td></tr><tr><td>Divergências abertas (cadastro)</td><td><b>${iss}</b></td></tr>
+    <tr><td>Conclusão</td><td><b>${ap.length?Math.round(done/ap.length*100)+"%":"—"}</b></td></tr>
+    <tr><td>Disponibilidade financeira${miss?" (parcial)":""}</td><td><b>${brl(cash/100)}</b></td></tr></tbody></table>`+
+    (risk?`<p class="warnp"><b>Atenção:</b> há pendências ou divergências nesta competência.</p>`+(adm?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="pforce"> Encerrar mesmo com pendências</label>`:`<p>Somente administradores podem encerrar com pendências. Resolva os itens acima.</p>`):"<p>Após o encerramento, as alterações comuns ficam bloqueadas.</p>");
+  $("pok").disabled=risk&&!adm; $("pok").onclick=async()=>{
+    if(risk&&!$("pforce")?.checked){ $("pmsg").textContent="Marque a confirmação para encerrar com pendências."; return; }
+    $("pok").disabled=true;
+    const {error}=await sb.rpc("close_period",{p_period:MM.per.id,p_force:risk});
+    $("pok").disabled=false;
+    if(error){ $("pmsg").textContent="Não foi possível encerrar: "+error.message; return; }
+    $("pdlg").close(); toast("Competência encerrada."); renderMensal(); };
+  $("pdlg").showModal();
+}
+function openReopen(){
+  $("ptitle").textContent="Reabrir competência"; $("pmsg").textContent=""; $("pok").textContent="Reabrir";
+  $("pbody").innerHTML=`<label>Justificativa (obrigatória, mínimo 10 caracteres)<textarea id="preason" rows="3" maxlength="500"></textarea></label>`;
+  $("pok").disabled=false; $("pok").onclick=async()=>{
+    const reason=$("preason").value.trim();
+    if(reason.length<10){ $("pmsg").textContent="Informe uma justificativa com pelo menos 10 caracteres."; return; }
+    $("pok").disabled=true;
+    const {error}=await sb.rpc("reopen_period",{p_period:MM.per.id,p_reason:reason});
+    $("pok").disabled=false;
+    if(error){ $("pmsg").textContent="Não foi possível reabrir: "+error.message; return; }
+    $("pdlg").close(); toast("Competência reaberta."); renderMensal(); };
+  $("pdlg").showModal(); $("preason").focus();
+}
+
+/* ============ DIVERGÊNCIAS (Etapa 3.2) ============ */
+let IS={rec:null,edit:null};
+const todayISO=()=>{const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;};
+const fmtDate=(d)=>d?d.split("-").reverse().join("/"):"—";
+function issueDialog(){
+  return `<dialog id="idlg"><form method="dialog" onsubmit="return false"><h3 id="ititle"></h3><div id="iacc" style="color:var(--mut)"></div>
+   <label>Descrição *<textarea id="i_desc" rows="2" maxlength="500"></textarea></label>
+   <label>Valor de referência (opcional)<input id="i_ref" inputmode="decimal" placeholder="0,00"></label>
+   <label>Valor apurado (opcional)<input id="i_found" inputmode="decimal" placeholder="0,00"></label>
+   <div id="i_diff" style="font-weight:600"></div>
+   <label>Responsável pela resolução<select id="i_resp"></select></label>
+   <label>Data da identificação<input type="date" id="i_date"></label>
+   <label>Observações<textarea id="i_notes" rows="2" maxlength="500"></textarea></label>
+   <label id="i_markl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="i_mark" checked> Marcar a conta como "Com divergência"</label>
+   <div class="msg" id="imsg" role="alert"></div>
+   <div class="row"><button type="button" class="btn sec" id="icancel">Cancelar</button><button type="button" class="btn" id="isave">Salvar</button></div></form></dialog>`;
+}
+function bindIssues(){
+  $("mbody").onclick=onMensalClick; $("icancel").onclick=()=>$("idlg").close(); $("isave").onclick=saveIssue;
+  $("i_ref").oninput=diffPreview; $("i_found").oninput=diffPreview;
+}
+function diffPreview(){
+  const a=parseBRL($("i_ref").value), b=parseBRL($("i_found").value);
+  $("i_diff").textContent=(a!=null&&b!=null)?"Diferença: "+brl((cents(b)-cents(a))/100):"";
+}
+const accName=(rid)=>{const r=MM.rows.find(x=>x.id===rid); return r?r.monitored_accounts.description:"—";};
+function drawIssues(){
+  const dis=MM.locked?"disabled":"", who=(id)=>{const x=MM.people.find(q=>q.id===id); return x?(x.full_name||x.email):"—";};
+  $("issues").innerHTML=`<h3>Divergências da competência</h3>`+(IV().length?`<table class="mt" style="min-width:900px"><thead><tr><th>Conta</th><th>Descrição</th><th class="r">Referência</th><th class="r">Apurado</th><th class="r">Diferença</th><th>Responsável</th><th>Identificada</th><th>Situação</th><th>Ações</th></tr></thead><tbody>`+
+    IV().map(i=>`<tr><td>${esc(accName(i.record_id))}</td><td>${esc(i.description)}</td><td class="r">${i.reference_value==null?"—":brl(i.reference_value)}</td><td class="r">${i.found_value==null?"—":brl(i.found_value)}</td><td class="r">${i.difference==null?"—":brl(i.difference)}</td>
+      <td>${esc(who(i.responsible_id))}</td><td>${fmtDate(i.identified_at)}</td><td><span class="tag ${i.resolved?"ok":"err"}">${i.resolved?"Resolvida em "+fmtDate(i.resolved_at):"Aberta"}</span></td>
+      <td><button class="lnk" data-a="iedit" data-id="${esc(i.id)}" ${dis}>Editar</button> <button class="lnk" data-a="ires" data-id="${esc(i.id)}" ${dis}>${i.resolved?"Reabrir":"Resolver"}</button></td></tr>`).join("")+"</tbody></table>"
+    :'<p style="color:var(--mut);margin:0">Nenhuma divergência registrada. Use o botão "Divergência" na linha da conta para registrar.</p>');
+}
+function openIssue(rec,issue){
+  IS={rec,edit:issue}; $("imsg").textContent="";
+  $("ititle").textContent=issue?"Editar divergência":"Registrar divergência";
+  $("iacc").textContent="Conta: "+rec.monitored_accounts.description+(rec.monitored_accounts.account_number?" ("+rec.monitored_accounts.account_number+")":"");
+  $("i_resp").innerHTML='<option value="">Nenhum</option>'+MM.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+  $("i_desc").value=issue?.description||""; $("i_ref").value=fmtNum(issue?.reference_value); $("i_found").value=fmtNum(issue?.found_value);
+  $("i_resp").value=issue?.responsible_id||rec.responsible_id||""; $("i_date").value=issue?.identified_at||todayISO(); $("i_notes").value=issue?.notes||"";
+  $("i_markl").classList.toggle("hidden",!!issue); $("i_mark").checked=true; diffPreview(); $("idlg").showModal(); $("i_desc").focus();
+}
+async function setRecStatus(r,st){
+  const {error}=await sb.from("monthly_account_records").update({status:st}).eq("id",r.id);
+  if(error){ toast("Não foi possível atualizar a situação da conta: "+error.message); return; }
+  r.status=st; const el=document.querySelector(`select[data-f="status"][data-id="${r.id}"]`);
+  if(el){ el.value=st; el.className="s-"+ST[st][1]; } updSummaries();
+}
+async function saveIssue(){
+  const desc=$("i_desc").value.trim(), ref=parseBRL($("i_ref").value), fo=parseBRL($("i_found").value);
+  if(!desc){ $("imsg").textContent="Informe a descrição."; return; }
+  if(ref===undefined||fo===undefined){ $("imsg").textContent="Valor inválido. Use o formato 1.234,56."; return; }
+  const p={description:desc,reference_value:ref,found_value:fo,responsible_id:$("i_resp").value||null,identified_at:$("i_date").value||todayISO(),notes:$("i_notes").value.trim()||null};
+  $("isave").disabled=true;
+  const q=IS.edit?sb.from("reconciliation_issues").update(p).eq("id",IS.edit.id):sb.from("reconciliation_issues").insert({...p,record_id:IS.rec.id});
+  const {data,error}=await q.select("*").single(); $("isave").disabled=false;
+  if(error){ $("imsg").textContent="Não foi possível salvar: "+error.message; return; }
+  MM.issues=IS.edit?MM.issues.map(i=>i.id===data.id?data:i):[data,...MM.issues];
+  $("idlg").close(); if(!IS.edit&&$("i_mark").checked) await setRecStatus(IS.rec,"divergencia");
+  drawIssues(); toast("Divergência salva.");
+}
+async function onMensalClick(e){
+  const th=e.target.closest("th[data-sort]"); if(th) return sortMensal(th);
+  const b=e.target.closest("button[data-a]"); if(!b) return;
+  if(b.dataset.a==="issue") return openIssue(MM.rows.find(r=>r.id===b.dataset.id),null);
+  const i=MM.issues.find(x=>x.id===b.dataset.id); if(!i) return;
+  if(b.dataset.a==="iedit") return openIssue(MM.rows.find(r=>r.id===i.record_id),i);
+  if(b.dataset.a==="ires"){
+    const res=!i.resolved;
+    if(!confirm(res?"Marcar esta divergência como resolvida?":"Reabrir esta divergência?")) return;
+    const {data,error}=await sb.from("reconciliation_issues").update({resolved:res,resolved_at:res?todayISO():null}).eq("id",i.id).select("*").single();
+    if(error){ toast("Não foi possível alterar: "+error.message); return; }
+    MM.issues=MM.issues.map(x=>x.id===i.id?data:x); drawIssues(); toast(res?"Divergência resolvida.":"Divergência reaberta.");
+    const rec=MM.rows.find(r=>r.id===i.record_id);
+    if(res&&rec.status==="divergencia"&&!MM.issues.some(x=>x.record_id===rec.id&&!x.resolved)&&confirm("Não há mais divergências abertas nesta conta. Atualizar a situação dela para Concluído?")) await setRecStatus(rec,"concluido");
+  }
+}
+
+/* ============ HISTÓRICO DE AUDITORIA ============ */
+const TB={companies:"Empresa",monitored_accounts:"Conta",monthly_periods:"Competência",monthly_account_records:"Registro mensal",reconciliation_issues:"Divergência",pos_machines:"Maquininha"};
+const OPN={INSERT:"Criação",UPDATE:"Alteração",DELETE:"Exclusão"};
+const FLD={final_balance:"Saldo final",previous_balance:"Saldo anterior",status:"Situação",responsible_id:"Responsável",notes:"Observações",accounting_code:"Código contábil",description:"Descrição",active:"Ativo",
+  reopen_reason:"Justificativa de reabertura",closed_at:"Encerrada em",closed_by:"Encerrada por",reopened_at:"Reaberta em",reopened_by:"Reaberta por",resolved:"Resolvida",resolved_at:"Data da resolução",
+  found_value:"Valor apurado",reference_value:"Valor de referência",legal_name:"Razão social",trade_name:"Nome fantasia",cnpj:"CNPJ",account_number:"Número da conta",institution:"Instituição",default_responsible:"Responsável sugerido",name:"Nome",provider:"Companhia",serial_number:"SN",pos_number:"POS"};
+async function byIds(table,sel,ids){
+  const out={}; ids=[...new Set(ids)].filter(Boolean);
+  for(let i=0;i<ids.length;i+=40){ const {data}=await sb.from(table).select(sel).in("id",ids.slice(i,i+40)); (data||[]).forEach(x=>out[x.id]=x); }
+  return out;
+}
+async function renderAudit(){
+  if(state.page!=="config") return;
+  $("view").insertAdjacentHTML("beforeend",`<div class="card tbl" style="max-width:none"><h3>Histórico de alterações (últimos 100 eventos)</h3>
+    <div class="bar"><select id="au_c"><option value="">Todas as empresas</option>${state.companies.map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("")}</select>
+    <select id="au_t"><option value="">Todos os tipos</option>${Object.entries(TB).map(([k,v])=>`<option value="${k}">${v}</option>`).join("")}</select>
+    <button class="btn sec" id="au_go">Atualizar</button></div><div id="au_list">Carregando…</div></div>`);
+  $("au_go").onclick=loadAudit; $("au_c").onchange=loadAudit; $("au_t").onchange=loadAudit; loadAudit();
+}
+async function loadAudit(){
+  $("au_list").textContent="Carregando…";
+  let q=sb.from("audit_logs").select("*").order("at",{ascending:false}).limit(100);
+  if($("au_c").value) q=q.eq("company_id",$("au_c").value); if($("au_t").value) q=q.eq("table_name",$("au_t").value);
+  const {data:logs,error}=await q; if(error){ $("au_list").textContent="Erro ao carregar: "+error.message; return; }
+  if(!logs.length){ $("au_list").textContent="Nenhum evento registrado com esses filtros."; return; }
+  const ids=(t)=>logs.filter(l=>l.table_name===t).map(l=>l.record_id);
+  const pIds=logs.flatMap(l=>[l.user_id,...(["responsible_id","closed_by","reopened_by","default_responsible"].includes(l.field)?[l.old_value,l.new_value]:[])]);
+  const [pf,recs,accs,pers]=await Promise.all([byIds("profiles","id,full_name,email",pIds),
+    byIds("monthly_account_records","id,monitored_accounts(description),monthly_periods(year,month)",ids("monthly_account_records")),
+    byIds("monitored_accounts","id,description",ids("monitored_accounts")),byIds("monthly_periods","id,year,month",ids("monthly_periods"))]);
+  const nm=(id)=>{const p=pf[id]; return p?(p.full_name||p.email):(id?"Usuário removido":"—");};
+  const obj=(l)=>{ if(l.table_name==="companies"){const c=state.companies.find(x=>x.id===l.record_id); return c?c.legal_name:"—";}
+    if(l.table_name==="monitored_accounts") return accs[l.record_id]?.description||"—";
+    if(l.table_name==="monthly_periods"){const p=pers[l.record_id]; return p?String(p.month).padStart(2,"0")+"/"+p.year:"—";}
+    if(l.table_name==="monthly_account_records"){const r=recs[l.record_id]; return r?`${r.monitored_accounts?.description||"—"} (${String(r.monthly_periods?.month).padStart(2,"0")}/${r.monthly_periods?.year})`:"—";}
+    return "—"; };
+  const val=(f,v)=>{ if(v==null) return "vazio"; if(/balance|_value$/.test(f)) return brl(v); if(f==="status") return ST[v]?ST[v][0]:v;
+    if(["responsible_id","closed_by","reopened_by","default_responsible"].includes(f)) return nm(v); if(f==="active"||f==="resolved") return v==="true"?"sim":"não";
+    if(f.endsWith("_at")&&v.includes("T")) return new Date(v).toLocaleString("pt-BR"); return v; };
+  $("au_list").innerHTML=`<table class="mt" style="min-width:900px"><thead><tr><th>Data e hora</th><th>Usuário</th><th>Tipo</th><th>Registro</th><th>Operação</th><th>Campo</th><th>De</th><th>Para</th></tr></thead><tbody>`+
+    logs.map(l=>`<tr><td>${new Date(l.at).toLocaleString("pt-BR")}</td><td>${esc(l.user_id?nm(l.user_id):"Sistema")}</td><td>${esc(TB[l.table_name]||l.table_name)}</td><td>${esc(obj(l))}</td><td>${OPN[l.operation]||esc(l.operation)}</td>
+    <td>${l.field?esc(FLD[l.field]||l.field):"—"}</td><td>${l.field?esc(val(l.field,l.old_value)):"—"}</td><td>${l.field?esc(val(l.field,l.new_value)):"—"}</td></tr>`).join("")+"</tbody></table>";
+}
+
+/* ============ DASHBOARD (Etapa 4.1) ============ */
+const MES_ABR=["jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"];
+let DB={f:null,rows:[],issues:[],people:[],detail:null};
+const isCash=(r)=>r.monitored_accounts.account_categories.counts_as_cash&&r.status!=="nao_aplicavel";
+const compName=(id)=>{const c=state.companies.find(x=>x.id===id); return c?(c.trade_name||c.legal_name):"—";};
+const kfmt=(v)=>Math.abs(v)>=1e6?(v/1e6).toFixed(1).replace(".",",")+" mi":Math.abs(v)>=1e3?Math.round(v/1e3)+" mil":String(Math.round(v));
+async function fetchAll(build){
+  let all=[],from=0;
+  for(;;){ const {data,error}=await build().range(from,from+999); if(error) throw error; all=all.concat(data); if(data.length<1000) break; from+=1000; }
+  return all;
+}
+async function renderDashboard(){
+  if(!DB.f){ const [y,m]=$("period").value.split("-").map(Number); DB.f={company:"",year:y,month:m,resp:"",status:""}; }
+  const f=DB.f; DB.detail=f.status?"status":null;
+  $("view").innerHTML=`<h2>Dashboard</h2><div class="bar">
+    <select id="d_c" aria-label="Empresa"><option value="">Todas as empresas</option>${state.companies.filter(c=>c.active).map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("")}</select>
+    <input id="d_y" type="number" min="2000" max="2100" style="width:90px" value="${f.year}" aria-label="Ano">
+    <select id="d_m" aria-label="Mês">${MESES.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}</select>
+    <select id="d_r" aria-label="Responsável"><option value="">Todos os responsáveis</option></select>
+    <select id="d_s" aria-label="Situação"><option value="">Todas as situações</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join("")}</select></div>
+    <p style="margin:-4px 0 12px;color:var(--mut);font-size:13px">Os indicadores mostram uma única competência. O filtro de situação afeta apenas a lista de detalhes.</p><div id="d_body">Carregando…</div>`;
+  $("d_c").value=f.company; $("d_m").value=f.month; $("d_s").value=f.status;
+  const upd=(k,el)=>()=>{ f[k]=el.type==="number"||k==="month"?Number(el.value):el.value; if(k==="status") DB.detail=f.status?"status":null; drawDash(); };
+  $("d_c").onchange=upd("company",$("d_c")); $("d_m").onchange=upd("month",$("d_m")); $("d_r").onchange=upd("resp",$("d_r")); $("d_s").onchange=upd("status",$("d_s"));
+  $("d_y").onchange=()=>{ f.year=Number($("d_y").value)||f.year; loadDash(); };
+  await loadDash();
+}
+async function loadDash(){
+  try{
+    const y=DB.f.year;
+    const [rows,issues,pf]=await Promise.all([
+      fetchAll(()=>sb.from("monthly_account_records").select("id,status,final_balance,responsible_id,updated_at,monitored_accounts!inner(description,account_type,account_categories!inner(kind,name,counts_as_cash)),monthly_periods!inner(year,month,company_id,status)").eq("monthly_periods.year",y).order("id")),
+      fetchAll(()=>sb.from("reconciliation_issues").select("*").eq("resolved",false).order("id")),
+      sb.from("profiles").select("id,full_name,email").eq("active",true).order("full_name")]);
+    DB.rows=rows; DB.issues=issues; DB.people=pf.data||[];
+    $("d_r").innerHTML='<option value="">Todos os responsáveis</option>'+DB.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+    $("d_r").value=DB.f.resp; drawDash();
+  }catch(e){ $("d_body").textContent="Erro ao carregar: "+(e.message||e); }
+}
+function drawDash(){
+  const f=DB.f, per=(r)=>r.monthly_periods, base=DB.rows.filter(r=>(!f.company||per(r).company_id===f.company)&&(!f.resp||r.responsible_id===f.resp));
+  const cur=base.filter(r=>per(r).month===f.month), n=(s)=>cur.filter(r=>r.status===s).length;
+  const ap=cur.filter(r=>r.status!=="nao_aplicavel"), done=n("concluido"), pct=ap.length?Math.round(done/ap.length*100):null;
+  const cashRows=cur.filter(isCash), withBal=cashRows.filter(r=>r.final_balance!=null), tot=withBal.reduce((a,r)=>a+cents(r.final_balance),0), miss=cashRows.length-withBal.length;
+  const open=new Set(cur.filter(r=>per(r).status==="aberta").map(r=>per(r).company_id)).size;
+  const K=(k,label,val,sub,cls)=>`<button class="kpi ${cls||""}" data-k="${k}"><small>${label}</small><b>${val}</b><small>${sub||"&nbsp;"}</small></button>`;
+  let h=`<div class="kpis">`+
+    K("empresas","Empresas ativas",state.companies.filter(c=>c.active).length,"abrir cadastro")+
+    K("open","Acompanhamento em andamento",open,"empresas com competência aberta")+
+    K("all","Contas monitoradas",cur.length,`${cur.length-ap.length} não aplicável(is)`)+
+    K("concluido","Concluídas",done,"","k-ok")+K("pendente","Pendentes",n("pendente"),"","k-err")+
+    K("em_andamento","Em andamento",n("em_andamento"),"","k-warn")+K("divergencia","Com divergência",n("divergencia"),"","k-err")+
+    K("all","Conclusão",pct==null?"—":pct+"%","dos itens aplicáveis")+
+    K("cash","Total financeiro",brl(tot/100),miss?`parcial: ${miss} sem saldo`:"bancos, aplicações e caixas","k-ok")+`</div>`;
+  // gráficos
+  const bars=Object.entries(ST).map(([k,v])=>{const c=n(k), w=cur.length?c/cur.length*100:0;
+    return `<div class="hb"><span>${v[0]}</span><div><i class="s-${v[1]}" style="width:${w}%"></i></div><b>${c}</b></div>`;}).join("");
+  const ev=MESES.map((_,i)=>{const rs=base.filter(r=>per(r).month===i+1); if(!rs.length) return {m:i+1,total:null,pct:null};
+    const a=rs.filter(r=>r.status!=="nao_aplicavel"), t=rs.filter(isCash).filter(r=>r.final_balance!=null).reduce((s,r)=>s+cents(r.final_balance),0)/100;
+    return {m:i+1,total:t,pct:a.length?Math.round(rs.filter(r=>r.status==="concluido").length/a.length*100):null};});
+  h+=`<div class="grid2"><div class="card wide"><h3>Conclusão</h3><div style="display:flex;align-items:center;gap:18px"><div class="donut" style="background:conic-gradient(var(--ok) ${pct||0}%,#e3e7ed 0)"><span>${pct==null?"—":pct+"%"}</span></div><div style="color:var(--mut)">${done} de ${ap.length} itens aplicáveis concluídos</div></div></div>
+    <div class="card wide"><h3>Distribuição por situação</h3>${cur.length?bars:'<span style="color:var(--mut)">Sem registros nesta competência.</span>'}</div></div>
+    <div class="card wide"><h3>Evolução mensal de ${f.year}: disponibilidade financeira e % de conclusão</h3>${evoSVG(ev,f.month)}</div><div class="card wide tbl"><h3>Saldo por tipo de conta em ${f.year} (soma dos saldos finais de cada mês, do acompanhamento mensal)</h3>${typeChart(base)}</div>`;
+  // listas
+  const mini=(rows,empty)=>rows.length?`<table class="mt" style="min-width:0"><tbody>`+rows.join("")+"</tbody></table>":`<span style="color:var(--mut)">${empty}</span>`;
+  const rowL=(r,extra)=>`<tr><td>${esc(compName(per(r).company_id))}</td><td>${esc(r.monitored_accounts.description)}</td><td>${extra}</td></tr>`;
+  const pend=cur.filter(r=>r.status==="pendente").slice(0,8).map(r=>rowL(r,`<span class="tag err">Pendente</span>`));
+  const byId=new Map(cur.map(r=>[r.id,r]));
+  const divs=DB.issues.filter(i=>byId.has(i.record_id)).slice(0,8).map(i=>{const r=byId.get(i.record_id); return rowL(r,esc(i.description));});
+  const rec=[...cur].sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).slice(0,8).map(r=>rowL(r,`${ST[r.status][0]} · ${new Date(r.updated_at).toLocaleDateString("pt-BR")}`));
+  h+=`<div class="grid2"><div class="card wide"><h3>Pendências</h3>${mini(pend,"Nenhuma pendência.")}</div><div class="card wide"><h3>Divergências abertas</h3>${mini(divs,"Nenhuma divergência aberta.")}</div></div>
+    <div class="card wide"><h3>Atualizados recentemente</h3>${mini(rec,"Sem registros.")}</div><div id="d_detail"></div>`;
+  $("d_body").innerHTML=h; $("d_body").onclick=(e)=>{ const b=e.target.closest(".kpi"); if(!b) return;
+    if(b.dataset.k==="empresas"){ location.hash="#empresas"; return; } DB.detail=b.dataset.k; drawDetail(cur); $("d_detail").scrollIntoView({behavior:"smooth"}); };
+  drawDetail(cur);
+}
+function drawDetail(cur){
+  const k=DB.detail, el=$("d_detail"); if(!k){ el.innerHTML=""; return; }
+  const per=(r)=>r.monthly_periods;
+  const titles={all:"Todas as contas",concluido:"Concluídas",pendente:"Pendentes",em_andamento:"Em andamento",divergencia:"Com divergência",cash:"Itens do total financeiro",open:"Competências abertas",status:"Situação: "+(ST[DB.f.status]?.[0]||"")};
+  let rows=k==="cash"?cur.filter(isCash):k==="all"?cur:k==="open"?cur.filter(r=>per(r).status==="aberta"):k==="status"?cur.filter(r=>r.status===DB.f.status):cur.filter(r=>r.status===k);
+  el.innerHTML=`<div class="card tbl wide"><h3>${titles[k]||""} — ${MESES[DB.f.month-1]}/${DB.f.year} (${rows.length})</h3>`+(rows.length?
+    `<table class="mt"><thead><tr><th>Empresa</th><th>Categoria</th><th>Conta</th><th class="r">Saldo final</th><th>Situação</th><th>Responsável</th></tr></thead><tbody>`+rows.slice(0,200).map(r=>{
+      const p=DB.people.find(x=>x.id===r.responsible_id);
+      return `<tr><td>${esc(compName(per(r).company_id))}</td><td>${esc(r.monitored_accounts.account_categories.name)}</td><td>${esc(r.monitored_accounts.description)}</td><td class="r">${r.final_balance==null?"—":brl(r.final_balance)}</td><td>${ST[r.status][0]}</td><td>${esc(p?(p.full_name||p.email):"—")}</td></tr>`;}).join("")+
+    `</tbody></table>${rows.length>200?"<p>Mostrando os primeiros 200.</p>":""}`:"Nenhum item.")+"</div>";
+}
+function evoSVG(ev,sel){
+  const W=720,H=215,top=22,plotH=120, vals=ev.map(d=>d.total).filter(v=>v!=null);
+  if(!vals.length) return '<span style="color:var(--mut)">Sem dados neste ano.</span>';
+  const mx=Math.max(0,...vals), mn=Math.min(0,...vals), span=(mx-mn)||1, y0=top+plotH*(mx/span), slot=(W-20)/12, bw=Math.min(34,slot-8);
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px" role="img" aria-label="Evolução mensal"><line x1="10" x2="${W-10}" y1="${y0}" y2="${y0}" stroke="#c7cfda"/>`;
+  ev.forEach((d,i)=>{ const x=10+i*slot+(slot-bw)/2, cx=x+bw/2;
+    if(d.total!=null){ const h=Math.abs(d.total)/span*plotH, y=d.total>=0?y0-h:y0, c=d.m===sel?"#2f5f9e":"#9db7d9";
+      s+=`<rect x="${x}" y="${y}" width="${bw}" height="${Math.max(h,1)}" fill="${c}"/><text x="${cx}" y="${d.total>=0?y-4:y+h+11}" font-size="10" text-anchor="middle" fill="#1d2733">${kfmt(d.total)}</text>`; }
+    s+=`<text x="${cx}" y="${H-30}" font-size="11" text-anchor="middle" fill="#6a7686">${MES_ABR[i]}</text><text x="${cx}" y="${H-12}" font-size="11" text-anchor="middle" fill="${d.pct===100?"#1f8a4c":"#d98a12"}" font-weight="600">${d.pct==null?"":d.pct+"%"}</text>`; });
+  return s+"</svg>";
+}
+
+/* ============ RELATÓRIOS (Etapa 4.2) ============ */
+const LIBS={
+  xlsx:["https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"],
+  pdf:["https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"]
+};
+const loadScript=(src)=>new Promise((res,rej)=>{
+  if(document.querySelector(`script[data-lib="${src}"]`)) return res();
+  const s=document.createElement("script"); s.src=src; s.dataset.lib=src; s.onload=res;
+  s.onerror=()=>{ s.remove(); rej(new Error("Não foi possível carregar a biblioteca de exportação. Verifique a conexão com a internet.")); }; document.head.appendChild(s); });
+const loadLibs=async(k)=>{ for(const u of LIBS[k]) await loadScript(u); };
+
+let RP={f:null,people:[],data:null};
+const pname=(id)=>{const p=RP.people.find(x=>x.id===id); return p?(p.full_name||p.email):"";};
+const sumC=(rs)=>rs.reduce((a,r)=>a+cents(r.final_balance),0)/100;
+const hasBal=(r)=>r.final_balance!=null&&r.status!=="nao_aplicavel";
+const cat=(r)=>r.monitored_accounts.account_categories, acc=(r)=>r.monitored_accounts, per=(r)=>r.monthly_periods;
+const blank=(n)=>Array(n).fill(null);
+
+async function rpRecords(f,withMonth){
+  const sel="id,status,previous_balance,final_balance,responsible_id,notes,monitored_accounts!inner(description,institution,account_number,accounting_code,sort_order,account_categories!inner(name,kind,counts_as_cash,sort_order)),monthly_periods!inner(year,month,company_id)";
+  let rs=await fetchAll(()=>{ let q=sb.from("monthly_account_records").select(sel).eq("monthly_periods.year",f.year).order("id");
+    if(withMonth) q=q.eq("monthly_periods.month",f.month); if(f.company) q=q.eq("monthly_periods.company_id",f.company); return q; });
+  if(f.resp) rs=rs.filter(r=>r.responsible_id===f.resp);
+  return rs.sort((a,b)=>compName(per(a).company_id).localeCompare(compName(per(b).company_id))||cat(a).sort_order-cat(b).sort_order||acc(a).sort_order-acc(b).sort_order);
+}
+const pctOf=(rs)=>{const a=rs.filter(r=>r.status!=="nao_aplicavel"); return a.length?Math.round(rs.filter(r=>r.status==="concluido").length/a.length*100):null;};
+
+function repDetail(kind){ return (recs,ctx)=>{
+  const bank=hasInst(kind), m=ctx.multi; let rs=recs.filter(r=>cat(r).kind===kind); if(ctx.f.status) rs=rs.filter(r=>r.status===ctx.f.status);
+  const cols=[...(m?[{h:"Empresa"}]:[]),{h:"Categoria"},{h:"Descrição"},...(bank?[{h:"Instituição"},{h:"Nº da conta"}]:[]),{h:"C. contábil"},{h:"Saldo anterior",t:"money"},{h:"Saldo final",t:"money"},{h:"Situação"},{h:"Responsável"},{h:"Observações"}];
+  const rows=rs.map(r=>[...(m?[compName(per(r).company_id)]:[]),cat(r).name,acc(r).description,...(bank?[acc(r).institution||"",acc(r).account_number||""]:[]),acc(r).accounting_code||"",r.previous_balance,r.final_balance,ST[r.status][0],pname(r.responsible_id),r.notes||""]);
+  const iD=cols.findIndex(c=>c.h==="Descrição"), iF=cols.findIndex(c=>c.h==="Saldo final"), totals=[];
+  const mk=(label,set)=>{const t=blank(cols.length); t[iD]=label; t[iF]=sumC(set.filter(hasBal)); const miss=set.filter(r=>r.final_balance==null&&r.status!=="nao_aplicavel").length; if(miss) t[cols.length-1]=miss+" sem saldo informado"; return t;};
+  if(["third_party","payroll","fiscal"].includes(kind)) [...new Set(rs.map(r=>cat(r).name))].forEach(n=>totals.push(mk("Total - "+n,rs.filter(r=>cat(r).name===n)))); else if(rs.length) totals.push(mk("Total",rs));
+  return {cols,rows,totals}; }; }
+
+const repSaldos=(recs,ctx)=>{
+  const cols=[{h:"Empresa"},{h:"CNPJ"},{h:"Contas e aplicações",t:"money"},{h:"Caixas",t:"money"},{h:"Disponibilidade financeira",t:"money"},{h:"Itens sem saldo",t:"int"},{h:"Conclusão",t:"pct"}];
+  const ids=[...new Set(recs.map(r=>per(r).company_id))];
+  const rows=ids.map(id=>{const rs=recs.filter(r=>per(r).company_id===id), c=state.companies.find(x=>x.id===id);
+    return [compName(id),c?fmtCnpj(c.cnpj):"",sumC(rs.filter(r=>cat(r).kind==="bank"&&hasBal(r))),sumC(rs.filter(r=>cat(r).kind==="cash"&&hasBal(r))),
+      sumC(rs.filter(r=>cat(r).counts_as_cash&&hasBal(r))),rs.filter(r=>cat(r).counts_as_cash&&r.final_balance==null&&r.status!=="nao_aplicavel").length,pctOf(rs)];});
+  const t=["Total",null,0,0,0,0,pctOf(recs)]; rows.forEach(r=>{for(let i=2;i<=5;i++) t[i]=Math.round((t[i]+r[i])*100)/100;});
+  return {cols,rows,totals:rows.length?[t]:[]};
+};
+const repPend=(recs,ctx)=>{
+  const m=ctx.multi, rs=recs.filter(r=>r.status==="pendente"||r.status==="em_andamento");
+  return {cols:[...(m?[{h:"Empresa"}]:[]),{h:"Categoria"},{h:"Conta"},{h:"Situação"},{h:"Responsável"},{h:"Observações"}],
+    rows:rs.map(r=>[...(m?[compName(per(r).company_id)]:[]),cat(r).name,acc(r).description,ST[r.status][0],pname(r.responsible_id),r.notes||""]),
+    totals:[["Total de pendências: "+rs.length,...blank((m?6:5)-1)]]};
+};
+const repDiv=(recs,ctx)=>{
+  const m=ctx.multi, byId=new Map(recs.map(r=>[r.id,r])), is=ctx.issues.filter(i=>byId.has(i.record_id));
+  const cols=[...(m?[{h:"Empresa"}]:[]),{h:"Conta"},{h:"Descrição"},{h:"Referência",t:"money"},{h:"Apurado",t:"money"},{h:"Diferença",t:"money"},{h:"Responsável"},{h:"Identificada em"},{h:"Situação"},{h:"Observações"}];
+  const rows=is.map(i=>{const r=byId.get(i.record_id); return [...(m?[compName(per(r).company_id)]:[]),acc(r).description,i.description,i.reference_value,i.found_value,i.difference,pname(i.responsible_id),fmtDate(i.identified_at),i.resolved?"Resolvida em "+fmtDate(i.resolved_at):"Aberta",i.notes||""];});
+  const t=blank(cols.length); t[cols.findIndex(c=>c.h==="Descrição")]="Total ("+is.length+", "+is.filter(i=>!i.resolved).length+" aberta(s))";
+  const d=is.filter(i=>i.difference!=null); t[cols.findIndex(c=>c.h==="Diferença")]=d.reduce((a,i)=>a+cents(i.difference),0)/100;
+  return {cols,rows,totals:rows.length?[t]:[]};
+};
+const repProd=(recs)=>{
+  const cols=[{h:"Responsável"},{h:"Registros",t:"int"},{h:"Concluídos",t:"int"},{h:"Pendentes",t:"int"},{h:"Em andamento",t:"int"},{h:"Com divergência",t:"int"},{h:"Não aplicável",t:"int"},{h:"Conclusão",t:"pct"}];
+  const ids=[...new Set(recs.map(r=>r.responsible_id||""))];
+  const line=(label,rs)=>[label,rs.length,...["concluido","pendente","em_andamento","divergencia","nao_aplicavel"].map(s=>rs.filter(r=>r.status===s).length),pctOf(rs)];
+  const rows=ids.map(id=>line(id?pname(id):"Sem responsável",recs.filter(r=>(r.responsible_id||"")===id)));
+  return {cols,rows,totals:rows.length?[line("Total",recs)]:[]};
+};
+const repEvo=(recs)=>{
+  const cols=[{h:"Competência"},{h:"Registros",t:"int"},{h:"Concluídos",t:"int"},{h:"Pendentes",t:"int"},{h:"Em andamento",t:"int"},{h:"Com divergência",t:"int"},{h:"Conclusão",t:"pct"},{h:"Disponibilidade financeira",t:"money"}];
+  const rows=[]; for(let m=1;m<=12;m++){ const rs=recs.filter(r=>per(r).month===m); if(!rs.length) continue;
+    const n=(s)=>rs.filter(r=>r.status===s).length;
+    rows.push([String(m).padStart(2,"0")+"/"+rs[0].monthly_periods.year,rs.length,n("concluido"),n("pendente"),n("em_andamento"),n("divergencia"),pctOf(rs),sumC(rs.filter(r=>cat(r).counts_as_cash&&hasBal(r)))]); }
+  return {cols,rows,totals:[]};
+};
+async function repHist(_,ctx){
+  const f=ctx.f, a=new Date(f.year,f.month-1,1).toISOString(), b=new Date(f.year,f.month,1).toISOString();
+  let q=sb.from("audit_logs").select("*").gte("at",a).lt("at",b).order("at",{ascending:false}).limit(1000); if(f.company) q=q.eq("company_id",f.company);
+  const {data:logs,error}=await q; if(error) throw error;
+  const ids=(t)=>logs.filter(l=>l.table_name===t).map(l=>l.record_id), RESP=["responsible_id","closed_by","reopened_by","default_responsible"];
+  const pIds=logs.flatMap(l=>[l.user_id,...(RESP.includes(l.field)?[l.old_value,l.new_value]:[])]);
+  const [pf,recs,accs,pers]=await Promise.all([byIds("profiles","id,full_name,email",pIds),byIds("monthly_account_records","id,monitored_accounts(description),monthly_periods(year,month)",ids("monthly_account_records")),
+    byIds("monitored_accounts","id,description",ids("monitored_accounts")),byIds("monthly_periods","id,year,month",ids("monthly_periods"))]);
+  const nm=(id)=>{const p=pf[id]; return p?(p.full_name||p.email):(id?"Usuário removido":"");};
+  const obj=(l)=>{ if(l.table_name==="companies") return compName(l.record_id); if(l.table_name==="monitored_accounts") return accs[l.record_id]?.description||"";
+    if(l.table_name==="monthly_periods"){const p=pers[l.record_id]; return p?String(p.month).padStart(2,"0")+"/"+p.year:"";}
+    if(l.table_name==="monthly_account_records"){const r=recs[l.record_id]; return r?`${r.monitored_accounts?.description||""} (${String(r.monthly_periods?.month).padStart(2,"0")}/${r.monthly_periods?.year})`:""; } return ""; };
+  const val=(fl,v)=>{ if(v==null) return "vazio"; if(/balance|_value$/.test(fl)) return brl(v); if(fl==="status") return ST[v]?ST[v][0]:v; if(RESP.includes(fl)) return nm(v)||"vazio";
+    if(fl==="active"||fl==="resolved") return v==="true"?"sim":"não"; if(fl.endsWith("_at")&&String(v).includes("T")) return new Date(v).toLocaleString("pt-BR"); return v; };
+  const cols=["Data e hora","Usuário","Tipo","Registro","Operação","Campo","De","Para"].map(h=>({h}));
+  const rows=logs.map(l=>[new Date(l.at).toLocaleString("pt-BR"),l.user_id?nm(l.user_id):"Sistema",TB[l.table_name]||l.table_name,obj(l),OPN[l.operation]||l.operation,l.field?(FLD[l.field]||l.field):"",l.field?val(l.field,l.old_value):"",l.field?val(l.field,l.new_value):""]);
+  return {cols,rows,totals:[["Total de eventos: "+logs.length,...blank(7)]]};
+}
+const REPORTS={
+  saldos:{label:"Saldos por empresa",fn:repSaldos},bank:{label:"Contas correntes e aplicações",fn:repDetail("bank"),st:1},cash:{label:"Caixas",fn:repDetail("cash"),st:1},card:{label:"Cartões",fn:repDetail("card"),st:1},payroll:{label:"Folha",fn:repDetail("payroll"),st:1},fiscal:{label:"Fiscal",fn:repDetail("fiscal"),st:1},
+  third_party:{label:"Fornecedores e clientes",fn:repDetail("third_party"),st:1},pend:{label:"Pendências",fn:repPend},div:{label:"Divergências",fn:repDiv,issues:1},
+  prod:{label:"Produtividade dos responsáveis",fn:repProd},evo:{label:"Evolução mensal",fn:repEvo,year:1},hist:{label:"Histórico de alterações",fn:repHist,audit:1}
+};
+
+async function renderRelatorios(){
+  if(!RP.f){ const [y,m]=$("period").value.split("-").map(Number); RP.f={report:"saldos",company:$("companySel").value,year:y,month:m,resp:"",status:""}; }
+  const f=RP.f, canAudit=["admin","supervisor"].includes(state.profile.role);
+  const pf=await sb.from("profiles").select("id,full_name,email").order("full_name"); RP.people=pf.data||[];
+  $("view").innerHTML=`<h2>Relatórios</h2><div class="bar">
+    <select id="r_r" aria-label="Relatório">${Object.entries(REPORTS).filter(([k,v])=>!v.audit||canAudit).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join("")}</select>
+    <select id="r_c" aria-label="Empresa"><option value="">Todas as empresas</option>${state.companies.map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("")}</select>
+    <input id="r_y" type="number" min="2000" max="2100" style="width:90px" value="${f.year}" aria-label="Ano">
+    <select id="r_m" aria-label="Mês">${MESES.map((n,i)=>`<option value="${i+1}">${n}</option>`).join("")}</select>
+    <select id="r_p" aria-label="Responsável"><option value="">Todos os responsáveis</option>${RP.people.filter(p=>p.active).map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("")}</select>
+    <select id="r_s" aria-label="Situação"><option value="">Todas as situações</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join("")}</select></div>
+    <div class="bar"><button class="btn sec" data-x="csv">Exportar CSV</button><button class="btn sec" data-x="xlsx">Exportar Excel</button><button class="btn sec" data-x="pdf">Exportar PDF</button>
+    <span id="r_info" style="color:var(--mut);align-self:center"></span></div>
+    <p style="margin:0 0 10px;color:var(--mut);font-size:13px">O filtro de situação vale só para os relatórios de contas, caixas e fornecedores/clientes. Os exportados incluem razão social, CNPJ, competência, data de emissão e totais.</p>
+    <div class="card tbl wide" id="r_out">Gerando…</div>`;
+  const map={r_r:"report",r_c:"company",r_y:"year",r_m:"month",r_p:"resp",r_s:"status"};
+  for(const [id,k] of Object.entries(map)){ $(id).value=f[k]; $(id).onchange=()=>{ f[k]=(k==="year"||k==="month")?(Number($(id).value)||f[k]):$(id).value; buildReport(); }; }
+  document.querySelectorAll("[data-x]").forEach(b=>b.onclick=()=>exportReport(b.dataset.x));
+  buildReport();
+}
+async function buildReport(){
+  const f=RP.f, R=REPORTS[f.report]; RP.data=null; $("r_out").textContent="Gerando…"; $("r_info").textContent="";
+  $("r_m").disabled=!!R.year; $("r_s").disabled=!R.st;
+  try{
+    let recs=[], extra={}; const multi=!f.company;
+    if(!R.audit){ recs=await rpRecords(f,!R.year); if(R.issues) extra.issues=await fetchAll(()=>sb.from("reconciliation_issues").select("*").order("id")); }
+    const out=await R.fn(recs,{multi,f,...extra}), co=state.companies.find(c=>c.id===f.company);
+    const fl=[f.resp?"Responsável: "+pname(f.resp):"",R.st&&f.status?"Situação: "+ST[f.status][0]:""].filter(Boolean).join("; ");
+    RP.data={...out,meta:{title:R.label,company:co?co.legal_name:"Todas as empresas (conforme suas permissões)",cnpj:co?fmtCnpj(co.cnpj):"—",
+      comp:R.year?"Ano "+f.year:MESES[f.month-1]+"/"+f.year,emitido:new Date().toLocaleString("pt-BR"),by:state.profile.full_name||state.profile.email,filters:fl}};
+    drawReport();
+  }catch(e){ $("r_out").textContent="Erro ao gerar o relatório: "+(e.message||e); }
+}
+const cellTxt=(c,v)=>v==null||v===""?"":c.t==="money"?fmtNum(v):c.t==="pct"?v+"%":String(v);
+function drawReport(){
+  const d=RP.data, m=d.meta; $("r_info").textContent=d.rows.length+" linha(s)";
+  const tr=(row,cls)=>`<tr class="${cls||""}">`+d.cols.map((c,i)=>`<td class="${c.t?"r":""}">${esc(cellTxt(c,row[i]))}</td>`).join("")+"</tr>";
+  $("r_out").innerHTML=`<h3>${esc(m.title)}</h3><p style="margin:0 0 10px;color:var(--mut)">${esc(m.company)} · CNPJ ${esc(m.cnpj)} · ${esc(m.comp)}${m.filters?" · "+esc(m.filters):""}</p>`+
+    (d.rows.length?`<table class="mt"><thead><tr>${d.cols.map(c=>`<th class="${c.t?"r":""}">${esc(c.h)}</th>`).join("")}</tr></thead><tbody>${d.rows.map(r=>tr(r)).join("")}${d.totals.map(t=>tr(t,"catrow")).join("")}</tbody></table>`:"Nenhum dado para os filtros selecionados.");
+}
+/* ----- exportação ----- */
+const metaLines=(m)=>[[m.title],["Empresa: "+m.company],["CNPJ: "+m.cnpj],["Competência: "+m.comp],["Emitido em: "+m.emitido+" por "+m.by],...(m.filters?[["Filtros: "+m.filters]]:[])];
+const fname=(d)=>(d.meta.title+"_"+d.meta.comp).normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-zA-Z0-9]+/g,"_").replace(/^_|_$/g,"");
+function download(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+async function exportReport(kind){
+  const d=RP.data; if(!d||!d.rows.length){ toast("Não há dados para exportar."); return; }
+  try{
+    if(kind==="csv"){
+      const q=(c,v)=>{ let s=cellTxt(c,v); if(!c.t&&/^[=+\-@]/.test(s)) s="'"+s; return '"'+s.replace(/"/g,'""')+'"'; };
+      const lines=[...metaLines(d.meta).map(l=>'"'+l[0].replace(/"/g,'""')+'"'),"",d.cols.map(c=>'"'+c.h+'"').join(";"),...[...d.rows,...d.totals].map(r=>d.cols.map((c,i)=>q(c,r[i])).join(";"))];
+      download(new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}),fname(d)+".csv");
+    } else if(kind==="xlsx"){
+      await loadLibs("xlsx");
+      const head=[...metaLines(d.meta),[]], body=[...d.rows,...d.totals].map(r=>r.map((v,i)=>v==null?"":d.cols[i].t==="pct"?v/100:v));
+      const ws=XLSX.utils.aoa_to_sheet([...head,d.cols.map(c=>c.h),...body]), r0=head.length+1;
+      body.forEach((r,ri)=>d.cols.forEach((c,ci)=>{ const cell=ws[XLSX.utils.encode_cell({r:r0+ri,c:ci})]; if(cell&&typeof cell.v==="number") cell.z=c.t==="pct"?"0%":c.t==="money"?"#,##0.00":"0"; }));
+      ws["!cols"]=d.cols.map((c,i)=>({wch:Math.min(45,Math.max(c.h.length,...body.map(r=>String(r[i]??"").length))+2)}));
+      const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,d.meta.title.replace(/[\[\]:*?\/\\]/g," ").slice(0,31)); XLSX.writeFile(wb,fname(d)+".xlsx");
+    } else {
+      await loadLibs("pdf");
+      const doc=new window.jspdf.jsPDF({orientation:"landscape",unit:"pt",format:"a4"}); let y=36;
+      doc.setFontSize(14); doc.text(d.meta.title,36,y); doc.setFontSize(9);
+      metaLines(d.meta).slice(1).forEach(l=>{ y+=13; doc.text(l[0],36,y); });
+      const al=(c)=>c.t?{halign:"right"}:{};
+      doc.autoTable({startY:y+12,head:[d.cols.map(c=>c.h)],body:d.rows.map(r=>r.map((v,i)=>cellTxt(d.cols[i],v))),foot:d.totals.map(r=>r.map((v,i)=>cellTxt(d.cols[i],v))),
+        styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[20,40,75]},footStyles:{fillColor:[230,238,248],textColor:[20,40,75],fontStyle:"bold"},
+        columnStyles:Object.fromEntries(d.cols.map((c,i)=>[i,al(c)])),showFoot:"lastPage"});
+      const n=doc.getNumberOfPages(); for(let p=1;p<=n;p++){ doc.setPage(p); doc.setFontSize(8); doc.text(`Página ${p} de ${n}`,doc.internal.pageSize.getWidth()-36,doc.internal.pageSize.getHeight()-18,{align:"right"}); }
+      doc.save(fname(d)+".pdf");
+    }
+    toast("Arquivo gerado.");
+  }catch(e){ toast("Não foi possível exportar: "+(e.message||e)); }
+}
+
+/* ============ IMPORTAÇÃO DE PLANILHA (Etapa 5.1) ============ */
+let IM=null;
+const nrm=(s)=>String(s??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim();
+const colL=(i)=>{let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+const FIELDS=[["description","Descrição *"],["number","Nº da conta"],["code","Código contábil"],["status","Situação"],["resp","Responsável"],["balance","Saldo final"]];
+const KIND_L={bank:"Contas correntes / aplicações",cash:"Caixas",card:"Cartões",payroll:"Folha",fiscal:"Fiscal",third_party:"Fornecedores / clientes"};
+$("view").addEventListener("click",(e)=>{ if(e.target.id==="mimport") openImport(); });
+
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,""); const sample=text.slice(0,4000);
+  const cnt=(ch)=>{let q=false,n=0; for(const c of sample){ if(c==='"') q=!q; else if(!q&&c===ch) n++; } return n;};
+  const best=[",",";","\t"].map(c=>[c,cnt(c)]).sort((a,b)=>b[1]-a[1])[0], d=best[1]?best[0]:",";
+  const rows=[]; let row=[],cell="",q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cell+='"';i++;} else q=false; } else cell+=c; }
+    else if(c==='"') q=true; else if(c===d){row.push(cell);cell="";}
+    else if(c==="\n"){row.push(cell);rows.push(row);row=[];cell="";} else if(c!=="\r") cell+=c; }
+  if(cell!==""||row.length){row.push(cell);rows.push(row);} return rows;
+}
+function parseMoney(s){
+  s=String(s??"").replace(/R\$|\s/g,""); if(s==="") return {v:null}; if(/^-+$/.test(s)||/^0+$/.test(s)) return {v:0};
+  let neg=false; if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1);} if(s.startsWith("-")){neg=!neg;s=s.slice(1);}
+  if(!/^[\d.,]+$/.test(s)) return {err:"valor inválido"};
+  const lc=s.lastIndexOf(","), ld=s.lastIndexOf("."); let n;
+  if(lc>=0&&ld>=0) n=lc>ld?s.replace(/\./g,"").replace(",","."):s.replace(/,/g,"");
+  else if(lc>=0) n=s.replace(/\./g,"").replace(",",".");
+  else if(ld>=0) n=/^\d{1,3}(\.\d{3})+$/.test(s)?s.replace(/\./g,""):s; else n=s;
+  const v=Number(n); if(!isFinite(v)) return {err:"valor inválido"}; if((n.split(".")[1]||"").length>2) return {err:"mais de 2 casas decimais"};
+  return {v:neg?-v:v};
+}
+const titleCase=(s)=>s.toLowerCase().replace(/(^|\s)\S/g,(c)=>c.toUpperCase());
+function guessSection(title){
+  const t=nrm(title), kind=/caixa/.test(t)?"cash":/cartao|cartoes/.test(t)?"card":/folha/.test(t)?"payroll":/fiscal/.test(t)?"fiscal":/fornecedor|cliente|adiant/.test(t)?"third_party":"bank";
+  let category=kind==="bank"?"Contas Correntes / Aplicações":kind==="cash"?"Caixas":kind==="card"?"Cartões":kind==="payroll"?(/ministro/.test(t)?"Folha - Ministros":/clt/.test(t)?"Folha - CLT":"Folha"):kind==="fiscal"?"Fiscal":/adiant.*fornec/.test(t)?"Adiantamento a fornecedores":/adiant.*client/.test(t)?"Adiantamento a clientes":/fornec/.test(t)?"Fornecedores":"Clientes";
+  let inst=""; const m=String(title).match(/\bbanco\s+(.+)$/i);
+  if(m&&kind==="bank") inst=/^(do|da|de)\s/i.test(m[1])?"Banco "+m[1].toLowerCase().replace(/^(\S+\s)(.*)$/,(a,p,r)=>p+titleCase(r)):titleCase(m[1].trim());
+  return {kind,category,institution:inst};
+}
+async function openImport(){
+  const cid=$("companySel").value, ym=$("period").value;
+  if(!cid||!ym){ toast("Selecione a empresa e a competência no cabeçalho."); return; }
+  const [y,m]=ym.split("-").map(Number), co=state.companies.find(c=>c.id===cid), pf=await sb.from("profiles").select("id,full_name,email").eq("active",true);
+  IM={cid,y,m,people:pf.data||[],wb:null,colmap:{},sections:[],rows:[],statusMap:{},respMap:{},mode:"skip"};
+  $("view").innerHTML=`<h2>Importar planilha</h2><div class="card wide"><p style="margin:0 0 10px">Empresa: <b>${esc(co?.legal_name||"")}</b> · Competência: <b>${MESES[m-1]}/${y}</b> <span style="color:var(--mut)">(para mudar, volte e altere no cabeçalho)</span></p>
+    <div class="bar"><input type="file" id="im_file" accept=".csv,.xlsx,.xls"><select id="im_sheet" class="hidden"></select><button class="btn sec" id="im_back">Voltar</button></div>
+    <p style="color:var(--mut);font-size:13px;margin:0">Aceita CSV e XLSX exportados do Google Sheets. Títulos de seção, cabeçalhos repetidos, linhas em branco e totais são reconhecidos e não viram contas. Números de conta e códigos são mantidos como texto.</p></div><div id="im_cfg"></div><div id="im_out"></div>`;
+  $("im_back").onclick=()=>renderMensal(); $("im_file").onchange=imRead; $("im_sheet").onchange=()=>imParse($("im_sheet").value);
+  $("im_cfg").onchange=imCfgChange;
+}
+async function imRead(e){
+  const f=e.target.files[0]; if(!f) return; $("im_out").innerHTML=""; $("im_cfg").textContent="Lendo arquivo…";
+  try{
+    if(f.size>5e6) throw new Error("Arquivo maior que 5 MB.");
+    if(/\.csv$/i.test(f.name)){ IM.wb=null; $("im_sheet").classList.add("hidden"); imBuild(parseCSV(await f.text())); }
+    else { await loadLibs("xlsx"); IM.wb=XLSX.read(await f.arrayBuffer(),{type:"array"}); const sn=IM.wb.SheetNames;
+      $("im_sheet").innerHTML=sn.map(n=>`<option>${esc(n)}</option>`).join(""); $("im_sheet").classList.toggle("hidden",sn.length<2); imParse(sn[0]); }
+  }catch(err){ $("im_cfg").textContent="Não foi possível ler o arquivo: "+(err.message||err); }
+}
+function imParse(sheet){ imBuild(XLSX.utils.sheet_to_json(IM.wb.Sheets[sheet],{header:1,raw:false,defval:""}).map(r=>r.map(c=>String(c??"")))); }
+function imBuild(matrix){
+  const isHdr=(cells)=>{const n=cells.map(nrm); return n.some(x=>x.startsWith("descri"))&&n.some(x=>x.includes("saldo"));};
+  IM.sections=[]; IM.rows=[]; IM.counts={blank:0,header:0,total:0}; IM.statusMap={}; IM.respMap={}; let first=null,cur=-1;
+  matrix.forEach((cells,li)=>{
+    const ne=cells.map((c,i)=>[i,c.trim()]).filter(x=>x[1]);
+    if(!ne.length){ IM.counts.blank++; return; }
+    if(isHdr(cells)){ IM.counts.header++; if(!first) first=cells; return; }
+    if(/^total\b/.test(nrm(ne[0][1]))){ IM.counts.total++; return; }
+    if(ne.length===1&&!/^[\d.,\-\sR$()]+$/.test(ne[0][1])){ IM.sections.push({title:ne[0][1],cfg:guessSection(ne[0][1])}); cur=IM.sections.length-1; return; }
+    if(cur<0){ IM.sections.push({title:"(sem título)",cfg:guessSection("")}); cur=0; }
+    IM.rows.push({line:li+1,sec:cur,cells});
+  });
+  IM.headers=first||[]; IM.ncol=Math.max(0,...matrix.map(r=>r.length)); IM.colmap={};
+  (first||[]).forEach((c,i)=>{ const n=nrm(c), set=(k)=>{ if(IM.colmap[k]==null) IM.colmap[k]=i; };
+    if(n.startsWith("descri")) set("description"); else if(n.includes("contabil")) set("code"); else if(n.includes("conta")||n.includes("numero")) set("number");
+    else if(n.includes("situac")||n.includes("status")) set("status"); else if(n.includes("respons")) set("resp"); else if(n.includes("saldo")&&!n.includes("anterior")) set("balance"); });
+  if(!IM.rows.length){ $("im_cfg").textContent="Nenhuma linha de dados foi encontrada no arquivo."; return; }
+  imCfg();
+}
+const imVal=(cells,k)=>IM.colmap[k]==null?"":String(cells[IM.colmap[k]]||"").trim();
+const defStatus=(raw)=>{const n=nrm(raw); return /conclu/.test(n)?"concluido":/andament/.test(n)?"em_andamento":/diverg/.test(n)?"divergencia":/pendent/.test(n)?"pendente":/fechad|encerrad|nao aplic|^n a$|inativ/.test(n)?"nao_aplicavel":"";};
+function defResp(raw){ const n=nrm(raw); const p=IM.people.find(x=>nrm(x.full_name)===n||nrm((x.email||"").split("@")[0])===n)||IM.people.find(x=>n&&(nrm(x.full_name).includes(n)||nrm((x.email||"").split("@")[0]).includes(n))); return p?p.id:""; }
+function imCfg(){
+  const colOpts=(sel)=>'<option value="">(não importar)</option>'+Array.from({length:IM.ncol},(_,i)=>`<option value="${i}"${sel===i?" selected":""}>${colL(i)} - ${esc((IM.headers[i]||"").trim()||"sem título")}</option>`).join("");
+  const dist=(k)=>{const m=new Map(); IM.rows.forEach(r=>{const v=imVal(r.cells,k); if(v&&!m.has(nrm(v))) m.set(nrm(v),v);}); return [...m];};
+  const sts=dist("status"), rsp=dist("resp");
+  sts.forEach(([k,raw])=>{ if(!(k in IM.statusMap)) IM.statusMap[k]=defStatus(raw); }); rsp.forEach(([k,raw])=>{ if(!(k in IM.respMap)) IM.respMap[k]=defResp(raw); });
+  $("im_cfg").innerHTML=`<div class="card wide"><h3>1. Colunas</h3><div class="grid2">${FIELDS.map(([k,l])=>`<label>${l}<select data-cm="${k}">${colOpts(IM.colmap[k])}</select></label>`).join("")}</div></div>
+    <div class="card wide tbl"><h3>2. Seções encontradas (${IM.sections.length})</h3><table class="mt" style="min-width:0"><thead><tr><th>Título na planilha</th><th>Linhas</th><th>Grupo</th><th>Categoria</th><th>Instituição</th></tr></thead><tbody>${IM.sections.map((s,i)=>`<tr><td>${esc(s.title)}</td><td>${IM.rows.filter(r=>r.sec===i).length}</td>
+      <td><select data-sf="${i}:kind">${Object.entries(KIND_L).map(([k,v])=>`<option value="${k}"${s.cfg.kind===k?" selected":""}>${v}</option>`).join("")}</select></td>
+      <td><input data-sf="${i}:category" value="${esc(s.cfg.category)}" maxlength="100"></td><td><input data-sf="${i}:institution" value="${esc(s.cfg.institution)}" maxlength="100"${hasInst(s.cfg.kind)?"":" disabled"}></td></tr>`).join("")}</tbody></table></div>
+    <div class="grid2"><div class="card wide tbl"><h3>3. Situações</h3>${sts.length?`<table class="mt" style="min-width:0"><tbody>${sts.map(([k,raw])=>`<tr><td>${esc(raw)}</td><td><select data-st="${esc(k)}"><option value="">(sem correspondência)</option>${Object.entries(ST).map(([s,v])=>`<option value="${s}"${IM.statusMap[k]===s?" selected":""}>${v[0]}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>`:'<span style="color:var(--mut)">Sem coluna de situação: tudo entra como Pendente.</span>'}</div>
+    <div class="card wide tbl"><h3>4. Responsáveis</h3>${rsp.length?`<table class="mt" style="min-width:0"><tbody>${rsp.map(([k,raw])=>`<tr><td>${esc(raw)}</td><td><select data-rs="${esc(k)}"><option value="">(nenhum)</option>${IM.people.map(p=>`<option value="${esc(p.id)}"${IM.respMap[k]===p.id?" selected":""}>${esc(p.full_name||p.email)}</option>`).join("")}</select></td></tr>`).join("")}</tbody></table>`:'<span style="color:var(--mut)">Sem coluna de responsável.</span>'}</div></div>
+    <p style="color:var(--mut);font-size:13px">Linhas reconhecidas e ignoradas: ${IM.counts.header} cabeçalho(s), ${IM.counts.total} total(is), ${IM.counts.blank} em branco.</p><button class="btn" id="im_val">Validar e visualizar</button>`;
+  $("im_val").onclick=imValidate;
+}
+function imCfgChange(e){
+  const t=e.target;
+  if(t.dataset.cm){ IM.colmap[t.dataset.cm]=t.value===""?null:Number(t.value); imCfg(); }
+  else if(t.dataset.sf){ const [i,f]=t.dataset.sf.split(":"); IM.sections[i].cfg[f]=t.value; if(f==="kind"){ IM.sections[i].cfg.category=({bank:"Contas Correntes / Aplicações",cash:"Caixas",card:"Cartões",payroll:"Folha - CLT",fiscal:"Fiscal",third_party:"Fornecedores"})[t.value]; imCfg(); } }
+  else if(t.dataset.st!==undefined) IM.statusMap[t.dataset.st]=t.value; else if(t.dataset.rs!==undefined) IM.respMap[t.dataset.rs]=t.value;
+}
+async function imValidate(){
+  if(IM.colmap.description==null){ toast("Informe a coluna de Descrição."); return; }
+  $("im_out").textContent="Validando…";
+  const [acc,per]=await Promise.all([sb.from("monitored_accounts").select("id,description,account_number,account_categories!inner(kind)").eq("company_id",IM.cid),
+    sb.from("monthly_periods").select("id,status").eq("company_id",IM.cid).eq("year",IM.y).eq("month",IM.m).maybeSingle()]);
+  if(acc.error||per.error){ $("im_out").textContent="Erro ao consultar o banco: "+(acc.error||per.error).message; return; }
+  if(per.data?.status==="encerrada"){ $("im_out").innerHTML='<div class="card wide">A competência está encerrada. Peça a um administrador para reabri-la antes de importar.</div>'; return; }
+  let recs=[]; if(per.data){ const r=await sb.from("monthly_account_records").select("account_id,status,final_balance").eq("period_id",per.data.id); recs=r.data||[]; }
+  const key=(k,d,n)=>k+"|"+String(d).trim().toLowerCase()+"|"+String(n||"").trim();
+  const am=new Map(acc.data.map(a=>[key(a.account_categories.kind,a.description,a.account_number),a])), rm=new Map(recs.map(r=>[r.account_id,r])), seen=new Map();
+  IM.valid=IM.rows.map(r=>{
+    const s=IM.sections[r.sec], cfg=s.cfg, c=r.cells, d=imVal(c,"description"), num=imVal(c,"number"), code=imVal(c,"code"), stRaw=imVal(c,"status"), rsRaw=imVal(c,"resp"), bal=parseMoney(imVal(c,"balance"));
+    const o={line:r.line,sec:s.title,kind:cfg.kind,category:(cfg.category||"").trim()||KIND_L[cfg.kind],institution:hasInst(cfg.kind)?(cfg.institution||"").trim():"",description:d,account_number:num,accounting_code:code,
+      status:stRaw?IM.statusMap[nrm(stRaw)]:"pendente",stRaw,responsible_id:rsRaw?(IM.respMap[nrm(rsRaw)]||""):"",bal:bal.v,state:"",msg:""};
+    const err=!d?"Descrição vazia":bal.err?"Saldo: "+bal.err:!o.status?"Situação sem correspondência: "+stRaw:"";
+    const k=key(cfg.kind,d,num); if(err){ o.state="erro"; o.msg=err; }
+    else if(seen.has(k)){ o.state="erro"; o.msg="Duplicada na planilha (linha "+seen.get(k)+")"; }
+    else { seen.set(k,r.line); const a=am.get(k); if(!a) o.state="nova"; else { const rec=rm.get(a.id); o.state=(!rec||(rec.final_balance==null&&rec.status==="pendente"))?"preenche":"conflito"; } }
+    return o; });
+  imPreview();
+}
+const IMS={nova:["Nova conta","ok"],preenche:["Preenche registro","ok"],conflito:["Já tem dados","warn"],erro:["Rejeitada","err"]};
+function imPreview(){
+  const v=IM.valid, n=(s)=>v.filter(x=>x.state===s).length, okN=v.length-n("erro");
+  $("im_out").innerHTML=`<div class="card wide tbl"><h3>5. Pré-visualização</h3><div class="pills"><span>Linhas <b>${v.length}</b></span><span>Novas contas <b>${n("nova")}</b></span><span>Preenchem registro <b>${n("preenche")}</b></span><span>Já têm dados <b>${n("conflito")}</b></span><span>Rejeitadas <b>${n("erro")}</b></span></div>
+    ${n("conflito")?`<div class="card" style="border-left:4px solid var(--warn);max-width:none"><b>${n("conflito")} registro(s) desta competência já têm dados.</b> Nada é sobrescrito sem a sua escolha:
+      <label style="display:flex;gap:8px;margin-top:6px"><input type="radio" name="im_mode" value="skip" ${IM.mode==="skip"?"checked":""}> Manter os dados existentes e ignorar essas linhas</label>
+      <label style="display:flex;gap:8px"><input type="radio" name="im_mode" value="overwrite" ${IM.mode==="overwrite"?"checked":""}> Sobrescrever com os valores da planilha (a alteração fica na auditoria)</label></div>`:""}
+    <table class="mt"><thead><tr><th>Linha</th><th>Seção</th><th>Descrição</th><th>Nº conta</th><th>C. contábil</th><th>Situação</th><th class="r">Saldo final</th><th>Resultado</th></tr></thead><tbody>${v.slice(0,300).map(o=>`<tr><td>${o.line}</td><td>${esc(o.sec)}</td><td>${esc(o.description)}</td><td>${esc(o.account_number)}</td><td>${esc(o.accounting_code)}</td><td>${o.status?ST[o.status][0]:esc(o.stRaw)}</td><td class="r">${o.bal==null?"—":brl(o.bal)}</td>
+      <td><span class="tag ${IMS[o.state][1]}">${IMS[o.state][0]}</span>${o.msg?" "+esc(o.msg):""}</td></tr>`).join("")}</tbody></table>${v.length>300?"<p>Mostrando as primeiras 300 linhas.</p>":""}
+    <div class="bar" style="margin-top:12px"><button class="btn" id="im_go" ${okN?"":"disabled"}>Confirmar importação de ${okN} linha(s)</button><span style="color:var(--mut);align-self:center">${n("erro")?n("erro")+" rejeitada(s) não serão importadas. Corrija a planilha e envie de novo para incluí-las.":""}</span></div></div>`;
+  document.querySelectorAll('input[name="im_mode"]').forEach(r=>r.onchange=()=>{ IM.mode=r.value; });
+  $("im_go").onclick=imConfirm;
+}
+async function imConfirm(){
+  const rows=IM.valid.filter(o=>o.state!=="erro").map(o=>({kind:o.kind,category:o.category,institution:o.institution,description:o.description,account_number:o.account_number,accounting_code:o.accounting_code,status:o.status,responsible_id:o.responsible_id,final_balance:o.bal}));
+  const ow=IM.mode==="overwrite"; if(!confirm(`Importar ${rows.length} linha(s) para ${MESES[IM.m-1]}/${IM.y}?${ow?" Os registros que já têm dados serão SOBRESCRITOS.":""} Se algo falhar, nada será gravado.`)) return;
+  $("im_go").disabled=true;
+  const {data,error}=await sb.rpc("import_period_rows",{p_company:IM.cid,p_year:IM.y,p_month:IM.m,p_rows:rows,p_overwrite:ow});
+  if(error){ $("im_go").disabled=false; toast("A importação não foi feita: "+error.message); return; }
+  const rej=IM.valid.filter(o=>o.state==="erro").length;
+  $("im_out").innerHTML=`<div class="card wide"><h3>Importação concluída</h3><table><tbody><tr><td>Contas novas criadas</td><td><b>${data.accounts_created}</b></td></tr><tr><td>Registros preenchidos</td><td><b>${data.records_filled}</b></td></tr>
+    <tr><td>Registros sobrescritos</td><td><b>${data.records_overwritten}</b></td></tr><tr><td>Registros mantidos (já tinham dados)</td><td><b>${data.records_kept}</b></td></tr>
+    <tr><td>Linhas ignoradas (cabeçalhos, totais e em branco)</td><td><b>${IM.counts.header+IM.counts.total+IM.counts.blank}</b></td></tr><tr><td>Linhas rejeitadas</td><td><b>${rej}</b></td></tr></tbody></table>
+    <p><button class="btn" id="im_done">Ir para o acompanhamento mensal</button></p></div>`;
+  $("im_cfg").innerHTML=""; $("im_done").onclick=()=>renderMensal();
+}
+
+/* ============ REFINAMENTOS DO ACOMPANHAMENTO MENSAL (Etapa 6.1) ============ */
+$("view").addEventListener("click",(e)=>{
+  const id=e.target.id; if(id!=="mprev"&&id!=="mnext") return;
+  const [y,m]=$("period").value.split("-").map(Number); if(!y) return;
+  const d=new Date(y,m-1+(id==="mnext"?1:-1),1);
+  $("period").value=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; renderMensal();
+});
+function bindSearch(){
+  $("msearch").oninput=(e)=>{ const q=e.target.value.trim().toLowerCase();
+    document.querySelectorAll("#mbody tr[data-q]").forEach(tr=>tr.classList.toggle("hidden",!!q&&!tr.dataset.q.includes(q))); };
+}
+async function createPanel(cid,y,m){
+  const {data:cats,error}=await sb.from("account_categories").select("id,name,kind").eq("company_id",cid).eq("active",true).order("kind").order("sort_order");
+  if(error){ toast("Erro ao carregar as categorias: "+error.message); return; }
+  if(!cats.length){ toast("Cadastre as categorias e contas da empresa antes de abrir uma competência."); return; }
+  $("mbody").innerHTML=`<div class="card"><h3>Criar competência de ${MESES[m-1]}/${y}</h3>
+    <p style="margin:0 0 8px">Serão copiadas as contas ativas das categorias marcadas. Saldo final fica vazio, a situação volta para Pendente e o saldo anterior vem do mês anterior, se existir.</p>
+    ${cats.map(c=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" class="cc" value="${esc(c.id)}" checked> ${esc(c.name)} <span style="color:var(--mut)">(${KIND_L[c.kind]})</span></label>`).join("")}
+    <div class="msg" id="cpmsg" role="alert"></div>
+    <div class="row" style="justify-content:flex-start;margin-top:8px"><button class="btn" id="cpgo">Confirmar criação</button><button class="btn sec" id="cpcancel">Cancelar</button></div></div>`;
+  $("cpcancel").onclick=()=>renderMensal();
+  $("cpgo").onclick=async()=>{
+    const ids=[...document.querySelectorAll(".cc:checked")].map(x=>x.value);
+    if(!ids.length){ $("cpmsg").textContent="Marque ao menos uma categoria."; return; }
+    $("cpgo").disabled=true;
+    const {error:e}=await sb.rpc("create_period",{p_company:cid,p_year:y,p_month:m,p_categories:ids});
+    if(e){ $("cpgo").disabled=false; $("cpmsg").textContent=e.code==="23505"?"Esta competência já existe.":"Não foi possível criar: "+e.message; return; }
+    toast("Competência criada."); renderMensal();
+  };
+}
+
+/* ============ ORDENAÇÃO POR COLUNA (Etapa 6.2) ============ */
+const SORTKEYS={
+  description:(r)=>r.monitored_accounts.description, institution:(r)=>r.monitored_accounts.institution, account_number:(r)=>r.monitored_accounts.account_number,
+  accounting_code:(r)=>r.monitored_accounts.accounting_code, previous_balance:(r)=>r.previous_balance, final_balance:(r)=>r.final_balance,
+  status:(r)=>ST[r.status][0], responsible:(r)=>{const p=MM.people.find(x=>x.id===r.responsible_id); return p?(p.full_name||p.email):"";}, updated_at:(r)=>r.updated_at
+};
+function sortMensal(th){
+  const key=th.dataset.sort, f=SORTKEYS[key]; if(!f) return;
+  MM.sort={key,dir:MM.sort&&MM.sort.key===key?-MM.sort.dir:1};
+  const col=new Intl.Collator("pt-BR",{numeric:true,sensitivity:"base"}), num=key==="previous_balance"||key==="final_balance", byId=new Map(MM.rows.map(r=>[r.id,r]));
+  document.querySelectorAll("#mbody table.mt").forEach(tb=>{
+    const body=tb.tBodies[0]; if(!body||!body.querySelector("tr[data-rid]")) return;
+    const groups=[]; let cur=null;
+    [...body.rows].forEach(tr=>{ if(tr.classList.contains("catrow")){ cur={head:tr,rows:[]}; groups.push(cur); } else if(cur) cur.rows.push(tr); });
+    groups.forEach(g=>g.rows.sort((a,b)=>{
+      const va=f(byId.get(a.dataset.rid)), vb=f(byId.get(b.dataset.rid)), ea=va==null||va==="", eb=vb==null||vb==="";
+      if(ea||eb) return ea&&eb?0:ea?1:-1;                       // vazios sempre por último
+      return MM.sort.dir*(num?Number(va)-Number(vb):col.compare(String(va),String(vb))); }));
+    groups.forEach(g=>{ body.appendChild(g.head); g.rows.forEach(tr=>body.appendChild(tr)); });
+    tb.querySelectorAll("th[data-sort]").forEach(h=>{ const on=h.dataset.sort===key; h.textContent=h.dataset.l+(on?(MM.sort.dir===1?" ▲":" ▼"):"");
+      h.setAttribute("aria-sort",on?(MM.sort.dir===1?"ascending":"descending"):"none"); });
+  });
+}
+function bindSort(){ $("mbody").onkeydown=(e)=>{ if(e.key==="Enter"&&e.target.matches("th[data-sort]")) e.target.click(); }; }
+
+/* ============ CARTÕES (Etapa 7) ============ */
+let CT={rows:[],people:[],edit:null};
+$("companySel").addEventListener("change",()=>{ if(state.page==="cartoes") renderCartoes(); });
+$("period").addEventListener("change",()=>{ if(state.page==="cartoes") renderCartoes(); });
+async function renderCartoes(){
+  const cid=$("companySel").value, [y,m]=$("period").value.split("-").map(Number), adm=state.profile.role==="admin", co=state.companies.find(c=>c.id===cid);
+  $("view").innerHTML=`<h2>Cartões</h2><p style="margin:-8px 0 12px;color:var(--mut)">${MESES[m-1]} de ${y} · ${esc(co?(co.trade_name||co.legal_name):"todas as empresas")}</p>
+   <div class="bar"><input type="search" id="ct_q" placeholder="Pesquisar por empresa, nome, banco ou código"><select id="ct_s"><option value="">Todas as situações</option>${Object.entries(ST).map(([k,v])=>`<option value="${k}">${v[0]}</option>`).join("")}</select>${adm?'<button class="btn" id="ct_new">Cadastrar cartão</button>':""}</div>
+   <div id="ct_sum" class="pills"></div><div class="card tbl wide" id="ct_list">Carregando…</div>
+   <p style="color:var(--mut);font-size:13px">Aparecem os cartões das empresas que já têm a competência criada. Para uma empresa nova, crie a competência no Acompanhamento mensal.</p>
+   <dialog id="ct_dlg"><form method="dialog" onsubmit="return false"><h3 id="ct_title"></h3>
+     <label>Empresa *<select id="k_co"></select></label><label>Nome *<input id="k_name" maxlength="200"></label><label>Banco<input id="k_bank" maxlength="120"></label>
+     <label>Código receita<input id="k_rev" maxlength="60"></label><label>Código contábil<input id="k_code" maxlength="60"></label>
+     <label>Final do cartão (somente os 4 últimos dígitos, opcional)<input id="k_num" maxlength="4" inputmode="numeric" placeholder="0000"></label>
+     <label>Responsável sugerido<select id="k_resp"></select></label><div class="msg" id="k_msg" role="alert"></div>
+     <div class="row"><button type="button" class="btn sec" id="k_cancel">Cancelar</button><button type="button" class="btn" id="k_save">Salvar</button></div></form></dialog>`;
+  try{
+    const [rs,pf]=await Promise.all([fetchAll(()=>{ let q=sb.from("monthly_account_records").select("id,status,responsible_id,monitored_accounts!inner(id,company_id,description,institution,account_number,accounting_code,revenue_code,active,sort_order,account_categories!inner(kind)),monthly_periods!inner(year,month,company_id,status)").eq("monthly_periods.year",y).eq("monthly_periods.month",m).order("id"); if(cid) q=q.eq("monthly_periods.company_id",cid); return q; }),
+      sb.from("profiles").select("id,full_name,email").eq("active",true).order("full_name")]);
+    CT.people=pf.data||[];
+    CT.rows=rs.filter(r=>r.monitored_accounts.account_categories.kind==="card").sort((a,b)=>compName(a.monthly_periods.company_id).localeCompare(compName(b.monthly_periods.company_id))||a.monitored_accounts.description.localeCompare(b.monitored_accounts.description));
+  }catch(e){ $("ct_list").textContent="Erro ao carregar: "+(e.message||e); return; }
+  $("ct_q").oninput=drawCartoes; $("ct_s").onchange=drawCartoes; $("ct_list").onchange=onCardChange; $("ct_list").onclick=onCardClick; $("k_cancel").onclick=()=>$("ct_dlg").close(); $("k_save").onclick=saveCard;
+  if(adm) $("ct_new").onclick=()=>openCard(null);
+  drawCartoes();
+}
+function ctSummary(){
+  const rs=CT.rows, ap=rs.filter(r=>r.status!=="nao_aplicavel"), n=(s)=>rs.filter(r=>r.status===s).length, done=n("concluido");
+  $("ct_sum").innerHTML=`<span>Cartões <b>${rs.length}</b></span><span>Concluídos <b>${done}</b></span><span>Pendentes <b>${n("pendente")}</b></span><span>Em andamento <b>${n("em_andamento")}</b></span><span>Divergência <b>${n("divergencia")}</b></span><span>Não aplicável <b>${n("nao_aplicavel")}</b></span><span>Conclusão <b>${ap.length?Math.round(done/ap.length*100)+"%":"—"}</b></span>`;
+}
+function drawCartoes(){
+  const adm=state.profile.role==="admin", q=$("ct_q").value.trim().toLowerCase(), st=$("ct_s").value, people='<option value="">—</option>'+CT.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+  const rows=CT.rows.filter(r=>{ const a=r.monitored_accounts; return (!st||r.status===st)&&(!q||[compName(r.monthly_periods.company_id),a.description,a.institution,a.revenue_code,a.accounting_code].join(" ").toLowerCase().includes(q)); });
+  ctSummary();
+  if(!rows.length){ $("ct_list").innerHTML=CT.rows.length?"Nenhum cartão com esses filtros.":"Nenhum cartão encontrado nesta competência."+(adm?" Use <strong>Cadastrar cartão</strong> para incluir.":""); return; }
+  $("ct_list").innerHTML=`<table class="mt"><thead><tr><th>Empresa</th><th>Nome</th><th>Código receita</th><th>C. contábil</th><th>Banco</th><th>Situação</th><th>Responsável</th>${adm?"<th>Ações</th>":""}</tr></thead><tbody>`+rows.map(r=>{
+    const a=r.monitored_accounts, dis=r.monthly_periods.status==="encerrada"?"disabled":"";
+    return `<tr><td>${esc(compName(r.monthly_periods.company_id))}</td><td>${esc(a.description)}${a.account_number?` <small style="color:var(--mut)">final ${esc(a.account_number)}</small>`:""}${a.active?"":' <span class="tag warn">Inativo</span>'}</td>
+      <td>${esc(a.revenue_code||"—")}</td><td>${esc(a.accounting_code||"—")}</td><td>${esc(a.institution||"—")}</td>
+      <td><select class="s-${ST[r.status][1]}" data-f="status" data-id="${esc(r.id)}" ${dis}>${Object.entries(ST).map(([k,v])=>`<option value="${k}"${k===r.status?" selected":""}>${v[0]}</option>`).join("")}</select></td>
+      <td><select data-f="responsible_id" data-id="${esc(r.id)}" ${dis}>${people.replace(`value="${r.responsible_id}"`,`value="${r.responsible_id}" selected`)}</select></td>
+      ${adm?`<td><button class="lnk" data-a="edit" data-id="${esc(r.id)}">Editar</button> <button class="lnk" data-a="tog" data-id="${esc(r.id)}">${a.active?"Inativar":"Reativar"}</button></td>`:""}</tr>`;}).join("")+"</tbody></table>"+
+    (CT.rows.some(r=>r.monthly_periods.status==="encerrada")?'<p style="color:var(--mut);font-size:13px">Cartões de competência encerrada ficam bloqueados.</p>':"");
+}
+async function onCardChange(e){
+  const el=e.target.closest("[data-f]"); if(!el) return;
+  const r=CT.rows.find(x=>x.id===el.dataset.id), f=el.dataset.f, v=el.value||null;
+  const {error}=await sb.from("monthly_account_records").update({[f]:v}).eq("id",r.id);
+  if(error){ toast("Não foi possível salvar: "+error.message); el.value=r[f]??""; return; }
+  r[f]=v; if(f==="status") el.className="s-"+ST[v][1]; ctSummary(); toast("Salvo.");
+}
+function openCard(r){
+  CT.edit=r; $("k_msg").textContent=""; $("ct_title").textContent=r?"Editar cartão":"Cadastrar cartão";
+  const a=r?.monitored_accounts, cid=$("companySel").value;
+  $("k_co").innerHTML='<option value="">Selecione…</option>'+state.companies.filter(c=>c.active||c.id===a?.company_id).map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("");
+  $("k_co").value=a?.company_id||cid||""; $("k_co").disabled=!!r;
+  $("k_resp").innerHTML='<option value="">Nenhum</option>'+CT.people.map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join("");
+  $("k_name").value=a?.description||""; $("k_bank").value=a?.institution||""; $("k_rev").value=a?.revenue_code||""; $("k_code").value=a?.accounting_code||""; $("k_num").value=a?.account_number||"";
+  $("k_resp").value=r?.responsible_id||""; $("ct_dlg").showModal(); $("k_name").focus();
+}
+async function saveCard(){
+  const cid=$("k_co").value, name=$("k_name").value.trim(), num=$("k_num").value.trim(), t=(id)=>$(id).value.trim()||null;
+  if(!cid||!name){ $("k_msg").textContent="Informe a empresa e o nome do cartão."; return; }
+  if(num&&!/^\d{4}$/.test(num)){ $("k_msg").textContent="Informe somente os 4 últimos dígitos (nunca o número completo do cartão)."; return; }
+  const f={description:name,institution:t("k_bank"),revenue_code:t("k_rev"),accounting_code:t("k_code"),account_number:num||null,default_responsible:$("k_resp").value||null};
+  $("k_save").disabled=true;
+  try{
+    if(CT.edit){ const {error}=await sb.from("monitored_accounts").update(f).eq("id",CT.edit.monitored_accounts.id); if(error) throw error; }
+    else {
+      let {data:cs,error:e1}=await sb.from("account_categories").select("id").eq("company_id",cid).eq("kind","card").eq("active",true).order("sort_order").limit(1); if(e1) throw e1;
+      let cat=cs?.[0]?.id;
+      if(!cat){ const r=await sb.from("account_categories").insert({company_id:cid,kind:"card",name:"Cartões",counts_as_cash:false,sort_order:1}).select("id").single(); if(r.error) throw r.error; cat=r.data.id; }
+      const {data:acc,error:e2}=await sb.from("monitored_accounts").insert({...f,company_id:cid,category_id:cat}).select("id").single(); if(e2) throw e2;
+      const [y,m]=$("period").value.split("-").map(Number);
+      const {data:per}=await sb.from("monthly_periods").select("id,status").eq("company_id",cid).eq("year",y).eq("month",m).maybeSingle();
+      if(per&&per.status==="aberta"){ const {error:e3}=await sb.from("monthly_account_records").insert({period_id:per.id,account_id:acc.id,responsible_id:f.default_responsible}); if(e3) throw e3; }
+    }
+    $("ct_dlg").close(); toast("Cartão salvo."); renderCartoes();
+  }catch(e){ $("k_msg").textContent="Não foi possível salvar: "+(e.message||e); }
+  $("k_save").disabled=false;
+}
+async function onCardClick(e){
+  const b=e.target.closest("button[data-a]"); if(!b) return; const r=CT.rows.find(x=>x.id===b.dataset.id); if(!r) return;
+  if(b.dataset.a==="edit") return openCard(r);
+  const a=r.monitored_accounts;
+  if(!confirm(a.active?`Inativar "${a.description}"? O histórico é mantido e o cartão não entra nas próximas competências.`:`Reativar "${a.description}"?`)) return;
+  const {error}=await sb.from("monitored_accounts").update({active:!a.active}).eq("id",a.id);
+  if(error){ toast("Não foi possível alterar: "+error.message); return; } renderCartoes();
+}
+
+/* ============ TIPOS DE CONTA: ÍCONES (Contas e aplicações) ============ */
+const TYPE_ICON={
+  "Conta corrente":'<path d="M3 10l9-6 9 6M5 10v9M10 10v9M14 10v9M19 10v9M3 21h18"/>',
+  "Aplicação financeira":'<path d="M3 17l6-6 4 4 8-8M15 7h6v6"/>',
+  "Conta poupança":'<circle cx="12" cy="8" r="4"/><path d="M8 8v8c0 1.7 1.8 3 4 3s4-1.3 4-3V8"/>',
+  "Caixa":'<rect x="3" y="7" width="18" height="12" rx="2"/><circle cx="12" cy="13" r="2.5"/>',
+  "Cartão corporativo":'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h4"/>',
+  "Outros":'<circle cx="6" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18" cy="12" r="1.5"/>',
+  "(sem tipo)":'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 3.5M12 17h.01"/>'
+};
+function typeTiles(accs,sel){
+  const key=(a)=>a.account_type||"(sem tipo)", act=accs.filter(a=>a.active), cnt=(t)=>act.filter(a=>key(a)===t).length;
+  const types=[...ACC_TYPES,...[...new Set(act.map(key))].filter(t=>!ACC_TYPES.includes(t)&&t!=="(sem tipo)"),...(cnt("(sem tipo)")?["(sem tipo)"]:[])];
+  return `<div class="tiles">`+types.map(t=>`<button type="button" class="tile" data-t="${esc(t)}" aria-pressed="${sel===t}"><svg viewBox="0 0 24 24" aria-hidden="true">${TYPE_ICON[t]||TYPE_ICON["Outros"]}</svg><span><b>${cnt(t)}</b><small>${esc(t==="(sem tipo)"?"Sem tipo":t)}</small></span></button>`).join("")+`</div>`;
+}
+
+/* ============ DASHBOARD: SALDO POR TIPO DE CONTA ============ */
+const TYPE_COLORS=["#14284b","#2f5f9e","#7fa6d6","#1f8a4c","#d98a12","#3a9e9a","#9aa4b1","#8a5fb5"];
+function typeChart(base){
+  const mo=(r)=>r.monthly_periods.month, lab=(r)=>r.monitored_accounts.account_type||(r.monitored_accounts.account_categories.kind==="cash"?"Caixa":"Sem tipo informado");
+  const rows=base.filter(r=>["bank","cash"].includes(r.monitored_accounts.account_categories.kind)&&r.status!=="nao_aplicavel"&&r.final_balance!=null);
+  if(!rows.length) return '<span style="color:var(--mut)">Sem saldos informados neste ano.</span>';
+  const ord=(t)=>{const i=ACC_TYPES.indexOf(t); return i<0?99:i;};
+  const types=[...new Set(rows.map(lab))].sort((a,b)=>ord(a)-ord(b)||a.localeCompare(b));
+  const val=(m,t)=>rows.filter(r=>mo(r)===m&&lab(r)===t).reduce((s,r)=>s+cents(r.final_balance),0)/100;
+  const has=(m)=>rows.some(r=>mo(r)===m);
+  const stacks=MESES.map((_,i)=>types.map(t=>val(i+1,t)));
+  const mx=Math.max(0,...stacks.map(s=>s.filter(v=>v>0).reduce((a,v)=>a+v,0))), mn=Math.min(0,...stacks.map(s=>s.filter(v=>v<0).reduce((a,v)=>a+v,0))), span=(mx-mn)||1;
+  const W=720,H=235,top=22,plotH=150,y0=top+plotH*(mx/span),slot=(W-20)/12,bw=Math.min(36,slot-8), k=plotH/span;
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:${W}px" role="img" aria-label="Saldo por tipo de conta em cada mês"><line x1="10" x2="${W-10}" y1="${y0}" y2="${y0}" stroke="#c7cfda"/>`;
+  stacks.forEach((st,i)=>{ const x=10+i*slot+(slot-bw)/2, cx=x+bw/2; let up=y0, dn=y0;
+    if(has(i+1)){ st.forEach((v,ti)=>{ if(!v) return; const h=Math.abs(v)*k; const c=TYPE_COLORS[ti%TYPE_COLORS.length];
+      if(v>0){ up-=h; s+=`<rect x="${x}" y="${up}" width="${bw}" height="${Math.max(h,1)}" fill="${c}"><title>${esc(types[ti])}: ${brl(v)}</title></rect>`; }
+      else { s+=`<rect x="${x}" y="${dn}" width="${bw}" height="${Math.max(h,1)}" fill="${c}"><title>${esc(types[ti])}: ${brl(v)}</title></rect>`; dn+=h; } });
+      s+=`<text x="${cx}" y="${up-4}" font-size="10" text-anchor="middle" fill="#1d2733">${kfmt(st.reduce((a,v)=>a+v,0))}</text>`; }
+    s+=`<text x="${cx}" y="${H-12}" font-size="11" text-anchor="middle" fill="#6a7686">${MES_ABR[i]}</text>`; });
+  s+="</svg>";
+  const legend=`<div class="lg">`+types.map((t,i)=>`<span><i style="background:${TYPE_COLORS[i%TYPE_COLORS.length]}"></i>${esc(t)}</span>`).join("")+`</div>`;
+  const tbl=`<table class="mt" style="min-width:900px;font-size:12px"><thead><tr><th>Tipo de conta</th>${MES_ABR.map(m=>`<th class="r">${m}</th>`).join("")}</tr></thead><tbody>`+
+    types.map((t,ti)=>`<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;background:${TYPE_COLORS[ti%TYPE_COLORS.length]}"></i>${esc(t)}</td>${MESES.map((_,i)=>`<td class="r">${has(i+1)?fmtNum(stacks[i][ti]):"—"}</td>`).join("")}</tr>`).join("")+
+    `<tr class="catrow"><td>Total do mês</td>${MESES.map((_,i)=>`<td class="r">${has(i+1)?fmtNum(stacks[i].reduce((a,v)=>a+v,0)):"—"}</td>`).join("")}</tr></tbody></table>`;
+  return s+legend+`<div style="overflow-x:auto">${tbl}</div>`;
+}
+
+/* ============ MAQUININHAS (Etapa 8) ============ */
+const POS_PROVIDERS=["Cielo","PagSeguro","Stone","Getnet","Rede","Mercado Pago","SumUp"];
+const POS_COLORS={"cielo":"#2f5f9e","pagseguro":"#d98a12","stone":"#1f8a4c","getnet":"#c43232","rede":"#8a5fb5","mercado pago":"#3a9e9a","sumup":"#14284b"};
+const POS_SVG='<rect x="6" y="2" width="12" height="20" rx="2"/><rect x="8.5" y="4.5" width="7" height="5" rx="1"/><path d="M9 13h.01M12 13h.01M15 13h.01M9 16h.01M12 16h.01M15 16h.01M9 19h.01M12 19h.01M15 19h.01"/>';
+let PM={rows:[],edit:null};
+$("companySel").addEventListener("change",()=>{ if(state.page==="maquininhas") renderMaquininhas(); });
+async function renderMaquininhas(){
+  const cid=$("companySel").value, canEdit=["admin","supervisor"].includes(state.profile.role), co=state.companies.find(c=>c.id===cid);
+  $("view").innerHTML=`<h2>Maquininhas</h2><p style="margin:-8px 0 12px;color:var(--mut)">${esc(co?(co.trade_name||co.legal_name):"Todas as empresas")}</p>
+   <div class="bar"><input type="search" id="pm_q" placeholder="Pesquisar por nome, companhia, SN ou POS"><select id="pm_s" aria-label="Situação"><option value="active">Ativas</option><option value="inactive">Inativas</option><option value="all">Todas</option></select>${canEdit?'<button class="btn" id="pm_new">Cadastrar maquininha</button>':""}</div>
+   <div id="pm_grid">Carregando…</div>
+   <dialog id="pm_dlg"><form method="dialog" onsubmit="return false"><h3 id="pm_title"></h3>
+     <label>Empresa *<select id="p_co"></select></label><label>Nome *<input id="p_name" maxlength="120"></label>
+     <label>Companhia *<select id="p_prov"></select></label><label id="p_othl" class="hidden">Qual companhia? *<input id="p_oth" maxlength="60"></label>
+     <label>SN (número de série) *<input id="p_sn" maxlength="80"></label><label>POS *<input id="p_pos" maxlength="80"></label>
+     <label>Descrição *<textarea id="p_desc" rows="3" maxlength="500"></textarea></label><div class="msg" id="p_msg" role="alert"></div>
+     <div class="row"><button type="button" class="btn sec hidden" id="p_tog"></button><button type="button" class="btn sec" id="p_cancel">Fechar</button><button type="button" class="btn" id="p_save">Salvar</button></div></form></dialog>`;
+  const q=sb.from("pos_machines").select("*").order("name"); const {data,error}=await (cid?q.eq("company_id",cid):q);
+  if(error){ $("pm_grid").textContent=/pos_machines/.test(error.message)?"A tabela de maquininhas ainda não existe. Rode o arquivo 010_maquininhas.sql no Supabase.":"Erro ao carregar: "+error.message; return; }
+  PM.rows=data||[];
+  $("pm_q").oninput=drawPM; $("pm_s").onchange=drawPM; $("pm_grid").onclick=(e)=>{ const b=e.target.closest(".pos-card"); if(b) openPM(PM.rows.find(x=>x.id===b.dataset.id)); };
+  $("p_cancel").onclick=()=>$("pm_dlg").close(); $("p_save").onclick=savePM; $("p_tog").onclick=togglePM;
+  $("p_prov").onchange=()=>$("p_othl").classList.toggle("hidden",$("p_prov").value!=="__outra");
+  if(canEdit) $("pm_new").onclick=()=>openPM(null);
+  drawPM();
+}
+function drawPM(){
+  const q=$("pm_q").value.trim().toLowerCase(), st=$("pm_s").value, all=!$("companySel").value;
+  const rows=PM.rows.filter(m=>(st==="all"||(st==="active")===m.active)&&(!q||[m.name,m.provider,m.serial_number,m.pos_number].join(" ").toLowerCase().includes(q)));
+  if(!rows.length){ $("pm_grid").innerHTML='<div class="card">'+(PM.rows.length?"Nenhuma maquininha com esses filtros.":"Nenhuma maquininha cadastrada.")+"</div>"; return; }
+  $("pm_grid").innerHTML=`<div class="pos-grid">`+rows.map(m=>{ const c=POS_COLORS[m.provider.trim().toLowerCase()]||"#6a7686";
+    return `<button type="button" class="pos-card${m.active?"":" off"}" data-id="${esc(m.id)}"><svg viewBox="0 0 24 24" style="stroke:${c}" aria-hidden="true">${POS_SVG}</svg><span class="pv" style="color:${c}">${esc(m.provider)}</span><b>${esc(m.name)}</b>${all?`<small>${esc(compName(m.company_id))}</small>`:""}${m.active?"":"<small>Inativa</small>"}</button>`;}).join("")+"</div>";
+}
+function openPM(m){
+  PM.edit=m; const canEdit=["admin","supervisor"].includes(state.profile.role), cid=$("companySel").value; $("p_msg").textContent="";
+  $("pm_title").textContent=m?"Maquininha":"Cadastrar maquininha";
+  $("p_co").innerHTML='<option value="">Selecione…</option>'+state.companies.filter(c=>c.active||c.id===m?.company_id).map(c=>`<option value="${esc(c.id)}">${esc(c.trade_name||c.legal_name)}</option>`).join("");
+  $("p_prov").innerHTML='<option value="">Selecione…</option>'+POS_PROVIDERS.map(p=>`<option>${p}</option>`).join("")+'<option value="__outra">Outra…</option>';
+  const known=m&&POS_PROVIDERS.find(p=>p.toLowerCase()===m.provider.trim().toLowerCase());
+  $("p_co").value=m?.company_id||cid||""; $("p_prov").value=m?(known||"__outra"):""; $("p_oth").value=m&&!known?m.provider:""; $("p_othl").classList.toggle("hidden",$("p_prov").value!=="__outra");
+  $("p_name").value=m?.name||""; $("p_sn").value=m?.serial_number||""; $("p_pos").value=m?.pos_number||""; $("p_desc").value=m?.description||"";
+  ["p_co","p_name","p_prov","p_oth","p_sn","p_pos","p_desc"].forEach(id=>$(id).disabled=!canEdit||(id==="p_co"&&!!m));
+  $("p_save").classList.toggle("hidden",!canEdit); $("p_tog").classList.toggle("hidden",!(canEdit&&m)); if(m) $("p_tog").textContent=m.active?"Inativar":"Reativar";
+  $("pm_dlg").showModal();
+}
+async function savePM(){
+  const g=(id)=>$(id).value.trim(), prov=$("p_prov").value==="__outra"?g("p_oth"):$("p_prov").value;
+  if(!g("p_co")||!g("p_name")||!prov||!g("p_sn")||!g("p_pos")||!g("p_desc")){ $("p_msg").textContent="Preencha todos os campos: empresa, nome, companhia, SN, POS e descrição."; return; }
+  const f={name:g("p_name"),provider:prov,serial_number:g("p_sn"),pos_number:g("p_pos"),description:g("p_desc")};
+  $("p_save").disabled=true;
+  const {error}=PM.edit?await sb.from("pos_machines").update(f).eq("id",PM.edit.id):await sb.from("pos_machines").insert({...f,company_id:g("p_co")});
+  $("p_save").disabled=false;
+  if(error){ $("p_msg").textContent=error.code==="23505"?"Já existe uma maquininha com este SN para essa companhia nesta empresa.":error.code==="23514"?"Preencha todos os campos.":"Não foi possível salvar: "+error.message; return; }
+  $("pm_dlg").close(); toast("Maquininha salva."); renderMaquininhas();
+}
+async function togglePM(){
+  const m=PM.edit; if(!confirm(m.active?`Inativar "${m.name}"? O histórico é mantido.`:`Reativar "${m.name}"?`)) return;
+  const {error}=await sb.from("pos_machines").update({active:!m.active}).eq("id",m.id);
+  if(error){ $("p_msg").textContent="Não foi possível alterar: "+error.message; return; }
+  $("pm_dlg").close(); toast(m.active?"Maquininha inativada.":"Maquininha reativada."); renderMaquininhas();
+}
+
+/* ============ FOLHA E FISCAL (Etapa 9) ============ */
+const MAIN_HIDE=["payroll","fiscal"];
+let SBACK=null;
+const IV=()=>MM.only?MM.issues.filter(i=>{const r=MM.rows.find(x=>x.id===i.record_id); return r&&MM.only.includes(r.monitored_accounts.account_categories.kind);}):MM.issues;
+$("view").addEventListener("click",(e)=>{
+  if(e.target.id==="mitems"){ const k=({folha:"payroll",fiscal:"fiscal"})[state.page]; if(k) renderStruct(k,()=>renderMensal()); }
+  if(e.target.id==="sback"&&SBACK) SBACK();
+});
+
+init();
+</script>
+</body>
+</html>
